@@ -1,5 +1,12 @@
 #include "set_environment.h"
-
+#include "rapidjson/document.h"     // rapidjson's DOM-style API
+#include "rapidjson/prettywriter.h" // for stringify JSON
+#include <rapidjson/filereadstream.h>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <cstdio>
 
 using namespace rapidjson;
 using namespace std;
@@ -15,6 +22,7 @@ void load_file_name(vector<vector<string>> &color_names, vector<vector<string>> 
 void load_file_name(vector<string> &color_names_, vector<string> &depth_names_);
 Vector3d rad2deg(Vector3d radian);
 Vector3d deg2rad(Vector3d degree);
+string rootDir = "C:\\ppc_data\\";
 
 void set_parameters(int mode)
 {
@@ -33,7 +41,7 @@ void set_parameters(int mode)
 		color_bits = 8;
 		depth_bits = 8;
 
-		path = "C:\\ppc_data\\MSR3DVideo-Ballet";
+		path = rootDir + "MSR3DVideo-Ballet";
 
 		break;
 
@@ -44,19 +52,20 @@ void set_parameters(int mode)
 		_width = 1920;
 		_height = 1080;
 
+
 		MinZ = 3.5;
 		MaxZ = 7.0;
 
 		color_bits = 8;
 		depth_bits = 16;
 
-		path = "C:\\ppc_data\\Poznan_Fencing";
+		path = rootDir + "Poznan_Fencing";
 
 		break;
 
 	case Intel_Kermit:
-		//total_num_cameras = 13;
-		total_num_cameras = 10;
+		total_num_cameras = 13;
+		//total_num_cameras = 10;
 		total_num_frames = 300;
 
 		_width = 1920;
@@ -68,13 +77,13 @@ void set_parameters(int mode)
 		color_bits = 10;
 		depth_bits = 16;
 
-		path = "C:\\ppc_data\\Intel_Kermit";
+		path = rootDir + "Intel_Kermit";
 
 		break;
 
 	case Technicolor_Painter:
-		//total_num_cameras = 16;
-		total_num_cameras = 10;
+		total_num_cameras = 16;
+		//total_num_cameras = 10;
 		total_num_frames = 372;
 
 		_width = 2048;
@@ -86,9 +95,27 @@ void set_parameters(int mode)
 		color_bits = 10;
 		depth_bits = 16;
 
-		path = "C:\\ppc_data\\Technicolor_Painter";
+		path = rootDir + "Technicolor_Painter";
 		break;
 
+
+	case hotelroom_r2_front_sample:
+		//total_num_cameras = 21 * 21;
+		total_num_cameras = 20;
+		total_num_frames = 1;
+
+		_width = 3840;
+		_height = 2160;
+
+		// ì•ˆì”€.
+		MinZ = 0.5283;
+		MaxZ = 3.9001;
+
+		color_bits = 10;
+		depth_bits = 16;
+
+		path = rootDir + "hotelroom_r2_front_sample";
+		break;
 	default:
 		cerr << "Wrong mode!!!" << endl;
 		exit(0);
@@ -139,6 +166,7 @@ void get_num_camera_N_frame(
 
 void load_matrix_data()
 {
+
 	if (mode == MSR3DVideo_Ballet || mode == Poznan_Fencing) {
 		string matrix_path = path + "\\*.txt";
 
@@ -254,7 +282,6 @@ void load_matrix_data()
 
 
 	}
-
 	else if (mode == Intel_Kermit || mode == Technicolor_Painter) {
 		string matrix_path;
 		vector<CalibStruct> temp_CalibParams(total_num_cameras);
@@ -269,13 +296,13 @@ void load_matrix_data()
 
 		vector<Vector3d> R_vec;
 		vector<Vector3d> P_vec;
+		vector<Vector2d> DR_vec;
 		vector<Vector3d> KF_vec;
 		vector<Vector3d> KP_vec;
-		if (mode == Intel_Kermit)
-			get_RT_data_json(fileName, R_vec, P_vec, KF_vec, KP_vec, 13);
-
+		if (mode == Intel_Kermit /*|| mode == Technicolor_Painter*/)
+			get_RT_data_json(fileName, R_vec, P_vec, KF_vec, KP_vec, total_num_cameras);
 		else if (mode == Technicolor_Painter)
-			get_RT_data_json(fileName, R_vec, P_vec, KF_vec, KP_vec, 15);
+			get_RT_data_json(fileName, R_vec, P_vec, DR_vec, KF_vec, KP_vec, total_num_cameras);
 
 		for (int idx = 0; idx < total_num_cameras; idx++)
 		{
@@ -283,14 +310,14 @@ void load_matrix_data()
 			//R_vec[idx] = deg2rad(R_vec[idx]);
 		}
 
-		//RPº¤ÅÍ -> ÄõÅÍ´Ï¾ð À¸·Î ¹Ù²ã¼­ temp_CalibParams¿¡ ³Ö¾î¾ßÇÔ!
+		//RPï¿½ï¿½ï¿½ï¿½ -> ï¿½ï¿½ï¿½Í´Ï¾ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ù²ã¼­ temp_CalibParamsï¿½ï¿½ ï¿½Ö¾ï¿½ï¿½ï¿½ï¿½!
 
 		for (int camera_idx = 0; camera_idx < total_num_cameras; camera_idx++) {
 			temp_CalibParams[camera_idx].m_K(0, 0) = KF_vec[camera_idx][0];
 			temp_CalibParams[camera_idx].m_K(1, 1) = KF_vec[camera_idx][1];
 			temp_CalibParams[camera_idx].m_K(0, 2) = KP_vec[camera_idx][0];
 			temp_CalibParams[camera_idx].m_K(1, 2) = KP_vec[camera_idx][1];
-			// ¹®Áö¿ø ¹ÚÁ¦.
+			// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
 			temp_CalibParams[camera_idx].m_K(2, 2) = 1.0;
 
 			//Quaternion2RotationMat(R_vec[camera_idx], temp_CalibParams[camera_idx].m_RotMatrix);
@@ -304,14 +331,131 @@ void load_matrix_data()
 
 			Vector3d temp;
 			temp << P_vec[camera_idx][1], P_vec[camera_idx][2], P_vec[camera_idx][0];
+
 			P_vec[camera_idx] = temp;
-
 			temp_CalibParams[camera_idx].m_Trans = P_vec[camera_idx];
-			//cout << "Translation ZXY·Î º¯È¯ °á°ú V[" << camera_idx << "] T :: " << endl;
-			//cout << temp_CalibParams[camera_idx].m_Trans << endl << endl;
+			//temp_CalibParams[camera_idx].m_Trans = -1 * temp_CalibParams[camera_idx].m_RotMatrix.transpose() * P_vec[camera_idx];
+		}
 
-			//temp_CalibParams[camera_idx].m_Trans = -1 * temp_CalibParams[camera_idx].m_RotMatrix.inverse() * temp_CalibParams[camera_idx].m_Trans;
-			//temp_CalibParams[camera_idx].m_RotMatrix = temp_CalibParams[camera_idx].m_RotMatrix.inverse();
+		m_CalibParams = temp_CalibParams;
+
+		int ref = total_num_cameras / 2;
+		Matrix3d refR = m_CalibParams[ref].m_RotMatrix;
+		Matrix3Xd refT(3, 1);
+		refT = m_CalibParams[ref].m_Trans;
+
+		Matrix3Xd refRT(3, 4);
+		refRT.col(0) = m_CalibParams[ref].m_RotMatrix.col(0);
+		refRT.col(1) = m_CalibParams[ref].m_RotMatrix.col(1);
+		refRT.col(2) = m_CalibParams[ref].m_RotMatrix.col(2);
+		refRT.col(3) = m_CalibParams[ref].m_Trans.col(0);
+
+		Matrix4d refRT4x4;
+		refRT4x4.row(0) = refRT.row(0);
+		refRT4x4.row(1) = refRT.row(1);
+		refRT4x4.row(2) = refRT.row(2);
+		refRT4x4.row(3) << 0, 0, 0, 1;
+
+		for (int cam_num = 0; cam_num < total_num_cameras; cam_num++)
+		{
+			m_CalibParams[cam_num].m_Trans = m_CalibParams[cam_num].m_RotMatrix * (-refR.inverse() * refT) + m_CalibParams[cam_num].m_Trans;
+			m_CalibParams[cam_num].m_RotMatrix *= refR.inverse();
+
+			m_CalibParams[cam_num].m_ProjMatrix = compute_projection_matrices(cam_num);
+		}
+
+		if (mode == Technicolor_Painter) {
+			tech_minmaxZ = DR_vec;
+		
+		}
+	}
+	else if (mode == hotelroom_r2_front_sample)
+	{
+		vector<CalibStruct> temp_CalibParams(total_num_cameras);
+		vector<Vector3d> R_vec;
+		vector<Vector3d> P_vec;
+
+		string filename = "cam_pose.txt";
+
+		string matrixfile;
+		matrixfile = path + "\\" + filename;
+		ifstream openFile(matrixfile);
+
+		if (!openFile.is_open())
+		{
+			cerr << "Failed to open " << endl;
+			exit(EXIT_FAILURE);
+		}
+
+		string buffer;
+		//R
+		getline(openFile, buffer);
+		while (!openFile.eof())
+		{
+			getline(openFile, buffer);
+			std::string delimiter = "\t";
+			//cout << "line:: " << buffer << endl;
+
+			size_t pos = 0;
+			std::string token;
+			int token_int = 0;
+
+			Vector3d R_ = { 0, 0, 0 };
+			Vector3d P_ = { 0, 0, 0 };
+
+			int var_idx = 0;
+			while ((pos = buffer.find(delimiter)) != std::string::npos) {
+				token = buffer.substr(0, pos);
+
+				token_int = stoi(token);
+				switch (var_idx)
+				{
+				case 0:
+					break;
+				case 1://Px
+					P_[0] = token_int;
+					break;
+				case 2://Py
+					P_[1] = token_int;
+					break;
+				case 4://Pz
+					P_[2] = token_int;
+					break;
+				}
+				//std::cout << token_int << std::endl;
+
+				buffer.erase(0, pos + delimiter.length());
+				var_idx++;
+			}
+
+			// cm to m
+			P_ *= 0.01;
+
+			P_vec.push_back(P_);
+			R_vec.push_back(R_);
+		}
+
+		for (int camera_idx = 0; camera_idx < total_num_cameras; camera_idx++)
+		{
+			float f = 12.604f;
+			float w = 36.0f;
+			float h = 20.0f;
+
+			temp_CalibParams[camera_idx].m_K(0, 0) = f * (_width / w);
+			temp_CalibParams[camera_idx].m_K(0, 1) = 0;
+			temp_CalibParams[camera_idx].m_K(0, 2) = _width / 2.f;
+			temp_CalibParams[camera_idx].m_K(1, 0) = 0;
+			temp_CalibParams[camera_idx].m_K(1, 1) = f * (_height / h);
+			temp_CalibParams[camera_idx].m_K(1, 2) = _height / 2.f;
+			temp_CalibParams[camera_idx].m_K(2, 0) = 0;
+			temp_CalibParams[camera_idx].m_K(2, 1) = 0;
+			temp_CalibParams[camera_idx].m_K(2, 2) = 1;//homo
+
+			//R: Euler 2 R_3*3
+			Euler2RotationMat(R_vec[camera_idx], temp_CalibParams[camera_idx].m_RotMatrix);
+
+			//temp_CalibParams[camera_idx].m_Trans = P_vec[camera_idx];
+			temp_CalibParams[camera_idx].m_Trans = -1 * temp_CalibParams[camera_idx].m_RotMatrix.transpose() * P_vec[camera_idx];
 		}
 
 		m_CalibParams = temp_CalibParams;
@@ -448,19 +592,19 @@ void Euler2RotationMat(Vector3d& euler, Matrix3d& rotationMat)
 	//
 	//Matrix3d Rz, Ry, Rx;
 	//Rz << cy, -sy, 0,
-	//   sy, cy, 0,
-	//   0, 0, 1;
+	//	sy, cy, 0,
+	//	0, 0, 1;
 	//Ry << cp, 0, sp,
-	//   0, 1, 0,
-	//   -sp, 0, cp;
+	//	0, 1, 0,
+	//	-sp, 0, cp;
 	//Rx << 1, 0, 0,
-	//   0, cr, -sr,
-	//   0, sr, cr;
+	//	0, cr, -sr,
+	//	0, sr, cr;
 	//
 	//Matrix3d temp = Rz * Ry;
 	//rotationMat = temp * Rx;
 
-	//cout << "Euler ZYX·Î º¯È¯ °á°ú :: " << endl;
+	//cout << "Euler ZYXï¿½ï¿½ ï¿½ï¿½È¯ ï¿½ï¿½ï¿½ :: " << endl;
 
 	//cout << rotationMat << endl;
 	//cout << endl;
@@ -476,18 +620,17 @@ void Euler2RotationMat(Vector3d& euler, Matrix3d& rotationMat)
 	//Rodrigues(rod_input, rod_output);
 
 	//for (int i = 0; i < 3; i++) {
-	//   for (int j= 0; j < 3; j++) {
-	//      rotationMat(i, j) = rod_output.at<double>(i, j);
-	//   }
+	//	for (int j= 0; j < 3; j++) {
+	//		rotationMat(i, j) = rod_output.at<double>(i, j);
+	//	}
 	//}
 
 
 }
 
-// Ä«¸Þ¶ó RT ÀúÀå
+// Ä«ï¿½Þ¶ï¿½ RT ï¿½ï¿½ï¿½ï¿½
 void compute_projection_matrices()
 {
-	cout << "compute projection matrix START:: " << endl;
 	Matrix3d inMat;
 	Matrix3Xd exMat(3, 4);
 
@@ -518,7 +661,6 @@ void compute_projection_matrices()
 		m_CalibParams[cam_idx].m_ProjMatrix(3, 2) = 0.0;
 		m_CalibParams[cam_idx].m_ProjMatrix(3, 3) = 1.0;
 	}
-	cout << "compute projection matrix ENDDDDD:: " << endl;
 
 }
 
@@ -581,6 +723,7 @@ void load_file_name(
 			color_path = path + "\\v" + to_string(cam_num) + "_tex*.yuv";
 			depth_path = path + "\\v" + to_string(cam_num) + "_dep*.yuv";
 			break;
+		
 		}
 
 		color_handle = _findfirst(color_path.c_str(), &color_fd);
@@ -592,6 +735,43 @@ void load_file_name(
 		_findnext(color_handle, &color_fd);
 		_findnext(depth_handle, &depth_fd);
 	}
+
+	_findclose(color_handle);
+	_findclose(depth_handle);
+}
+
+void load_file_name_mode4(
+	vector<vector<string>>& color_names,
+	vector<vector<string>>& depth_names)
+{
+	string cam_path = path;
+	intptr_t color_handle, depth_handle;
+
+	int cnt = 0;
+	struct _finddata_t color_fd, depth_fd;
+
+	string color_path = cam_path + "\\image" + "\\*.png";
+	string depth_path = cam_path + "\\depth" + "\\*.png";
+
+	color_handle = _findfirst(color_path.c_str(), &color_fd);
+	depth_handle = _findfirst(depth_path.c_str(), &depth_fd);
+
+	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++)
+	{
+		for (int frame_num = 0; frame_num < total_num_frames; frame_num++)
+		{
+			color_names[cam_num][frame_num] = color_fd.name;
+			depth_names[cam_num][frame_num] = depth_fd.name;
+
+			_findnext(color_handle, &color_fd);
+			_findnext(depth_handle, &depth_fd);
+		}
+	}
+
+	//for (int cam_num = 0; cam_num < total_num_cameras; cam_num++)
+	//{
+	//   cout << color_names[cam_num][0] << endl;
+	//}
 
 	_findclose(color_handle);
 	_findclose(depth_handle);
@@ -621,8 +801,7 @@ void get_RT_data_json(const char* file, vector<Vector3d>& Rotation_vec, vector<V
 	String KP_name("Principle_point");
 
 	const Value& cameras = d["cameras"];
-	assert(attributes.IsArray());
-
+	//assert(attributes.IsArray());
 
 	for (SizeType i = 0; i < cameras.Size(); i++)
 	{
@@ -698,6 +877,115 @@ void get_RT_data_json(const char* file, vector<Vector3d>& Rotation_vec, vector<V
 	KFocal_vec = KF_vec;
 	KPrinciple_vec = KP_vec;
 }
+
+void get_RT_data_json(
+	const char* file,
+	vector<Vector3d>& Rotation_vec,
+	vector<Vector3d>& Position_vec,
+	vector<Vector2d>& Depth_vec,
+	vector<Vector3d>& KFocal_vec,
+	vector<Vector3d>& KPrinciple_vec,
+	int total_num_cameras)
+{
+	const char* fileName = file;
+
+	FILE* pFile = fopen(fileName, "rb");
+	char buffer_str[65536];
+	FileReadStream is(pFile, buffer_str, sizeof(buffer_str));
+	Document d;
+	d.ParseStream<0, UTF8<>, FileReadStream>(is);
+
+	vector<Vector3d> R_vec;
+	vector<Vector3d> P_vec;
+	vector<Vector2d> DR_vec;
+	vector<Vector3d> KF_vec;
+	vector<Vector3d> KP_vec;
+	Vector3d R_vec_temp;
+	Vector3d P_vec_temp;
+	Vector2d DR_vec_temp;
+	Vector3d KF_vec_temp;
+	Vector3d KP_vec_temp;
+	String R_name("Rotation");
+	String P_name("Position");
+	String DR_name("Depth_range");
+	String KF_name("Focal");
+	String KP_name("Principle_point");
+
+	const Value& cameras = d["cameras"];
+	//assert(attributes.IsArray());
+
+	for (SizeType i = 0; i < cameras.Size(); i++)
+	{
+		const Value& attribute = cameras[i];
+		assert(attribute.IsObject());
+
+		for (Value::ConstMemberIterator itr = attribute.MemberBegin(); itr != attribute.MemberEnd(); ++itr)
+		{
+			int type_num = 6;
+
+			switch (itr->value.GetType())
+			{
+			case 4://!< array
+
+				if ((R_name.compare(itr->name.GetString()) == 0))//Rotation
+				{
+					for (SizeType i = 0; i < itr->value.Size(); i++)
+					{
+						R_vec_temp[i] = itr->value[i].GetDouble();
+						//cout << R_vec_temp[i] << endl;
+					}
+					R_vec.push_back(R_vec_temp);
+				}
+				else if ((P_name.compare(itr->name.GetString()) == 0))//Position
+				{
+					for (SizeType i = 0; i < itr->value.Size(); i++)
+					{
+						P_vec_temp[i] = itr->value[i].GetDouble();
+						//cout << P_vec_temp[i] << endl;
+					}
+					P_vec.push_back(P_vec_temp);
+				}
+				else if ((DR_name.compare(itr->name.GetString()) == 0))//Depth range
+				{
+					for (SizeType i = 0; i < itr->value.Size(); i++)
+					{
+						DR_vec_temp[i] = itr->value[i].GetDouble();
+						//cout << P_vec_temp[i] << endl;
+					}
+					DR_vec.push_back(DR_vec_temp);
+				}
+				else if ((KF_name.compare(itr->name.GetString()) == 0))//Position
+				{
+					for (SizeType i = 0; i < itr->value.Size(); i++)
+					{
+						KF_vec_temp[i] = itr->value[i].GetDouble();
+						//cout << P_vec_temp[i] << endl;
+					}
+					KF_vec.push_back(KF_vec_temp);
+				}
+				else if ((KP_name.compare(itr->name.GetString()) == 0))//Position
+				{
+					for (SizeType i = 0; i < itr->value.Size(); i++)
+					{
+						KP_vec_temp[i] = itr->value[i].GetDouble();
+						//cout << P_vec_temp[i] << endl;
+					}
+					KP_vec.push_back(KP_vec_temp);
+				}
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	Rotation_vec = R_vec;
+	Position_vec = P_vec;
+	Depth_vec = DR_vec;
+	KFocal_vec = KF_vec;
+	KPrinciple_vec = KP_vec;
+}
+
 
 Vector3d rad2deg(Vector3d radian)
 {

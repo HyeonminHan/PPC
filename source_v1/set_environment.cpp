@@ -33,7 +33,7 @@ void set_parameters(int mode)
 		color_bits = 8;
 		depth_bits = 8;
 
-		path = "C:\\ppc_data\\MSR3DVideo-Ballet";
+		path ="C:\\ppc_data\\MSR3DVideo-Ballet";
 
 		break;
 
@@ -87,6 +87,25 @@ void set_parameters(int mode)
 		depth_bits = 16;
 
 		path = "C:\\ppc_data\\Technicolor_Painter";
+		break;
+
+	case hotelroom_r2_front_sample:
+		//total_num_cameras = 21 * 21;
+		total_num_cameras = 4;
+		total_num_frames = 1;
+
+		_width = 3840;
+		//_height = 2160;
+		_height = 1160;
+
+		// ¾È¾¸.
+		MinZ = 0.5283;
+		MaxZ = 3.9001;
+
+		color_bits = 10;
+		depth_bits = 16;
+
+		path = "C:\\ppc_data\\hotelroom_r2_front_sample";
 		break;
 
 	default:
@@ -341,6 +360,123 @@ void load_matrix_data()
 			m_CalibParams[cam_num].m_ProjMatrix = compute_projection_matrices(cam_num);
 		}
 	}
+	else if (mode == hotelroom_r2_front_sample)
+	{
+	vector<CalibStruct> temp_CalibParams(total_num_cameras);
+	vector<Vector3d> R_vec;
+	vector<Vector3d> P_vec;
+
+	string filename = "cam_pose.txt";
+
+	string matrixfile;
+	matrixfile = path + "\\" + filename;
+	ifstream openFile(matrixfile);
+
+	if (!openFile.is_open())
+	{
+		cerr << "Failed to open " << endl;
+		exit(EXIT_FAILURE);
+	}
+
+	string buffer;
+	//R
+	getline(openFile, buffer);
+	while (!openFile.eof())
+	{
+		getline(openFile, buffer);
+		std::string delimiter = "\t";
+		//cout << "line:: " << buffer << endl;
+
+		size_t pos = 0;
+		std::string token;
+		int token_int = 0;
+
+		Vector3d R_ = { 0, 0, 0 };
+		Vector3d P_ = { 0, 0, 0 };
+
+		int var_idx = 0;
+		while ((pos = buffer.find(delimiter)) != std::string::npos) {
+			token = buffer.substr(0, pos);
+
+			token_int = stoi(token);
+			switch (var_idx)
+			{
+			case 0:
+				break;
+			case 1://Px
+				P_[0] = token_int;
+				break;
+			case 2://Py
+				P_[1] = token_int;
+				break;
+			case 4://Pz
+				P_[2] = token_int;
+				break;
+			}
+			//std::cout << token_int << std::endl;
+
+			buffer.erase(0, pos + delimiter.length());
+			var_idx++;
+		}
+
+		// cm to m
+		P_ *= 0.01;
+
+		P_vec.push_back(P_);
+		R_vec.push_back(R_);
+	}
+
+	for (int camera_idx = 0; camera_idx < total_num_cameras; camera_idx++)
+	{
+		float f = 12.604f;
+		float w = 36.0f;
+		float h = 20.0f;
+
+		temp_CalibParams[camera_idx].m_K(0, 0) = f * (_width / w);
+		temp_CalibParams[camera_idx].m_K(0, 1) = 0;
+		temp_CalibParams[camera_idx].m_K(0, 2) = _width / 2.f;
+		temp_CalibParams[camera_idx].m_K(1, 0) = 0;
+		temp_CalibParams[camera_idx].m_K(1, 1) = f * (_height / h);
+		temp_CalibParams[camera_idx].m_K(1, 2) = _height / 2.f;
+		temp_CalibParams[camera_idx].m_K(2, 0) = 0;
+		temp_CalibParams[camera_idx].m_K(2, 1) = 0;
+		temp_CalibParams[camera_idx].m_K(2, 2) = 1;//homo
+
+		//R: Euler 2 R_3*3
+		Euler2RotationMat(R_vec[camera_idx], temp_CalibParams[camera_idx].m_RotMatrix);
+
+		//temp_CalibParams[camera_idx].m_Trans = P_vec[camera_idx];
+		temp_CalibParams[camera_idx].m_Trans = -1 * temp_CalibParams[camera_idx].m_RotMatrix.transpose() * P_vec[camera_idx];
+	}
+
+	m_CalibParams = temp_CalibParams;
+
+	int ref = total_num_cameras / 2;
+	Matrix3d refR = m_CalibParams[ref].m_RotMatrix;
+	Matrix3Xd refT(3, 1);
+	refT = m_CalibParams[ref].m_Trans;
+
+	Matrix3Xd refRT(3, 4);
+	refRT.col(0) = m_CalibParams[ref].m_RotMatrix.col(0);
+	refRT.col(1) = m_CalibParams[ref].m_RotMatrix.col(1);
+	refRT.col(2) = m_CalibParams[ref].m_RotMatrix.col(2);
+	refRT.col(3) = m_CalibParams[ref].m_Trans.col(0);
+
+	Matrix4d refRT4x4;
+	refRT4x4.row(0) = refRT.row(0);
+	refRT4x4.row(1) = refRT.row(1);
+	refRT4x4.row(2) = refRT.row(2);
+	refRT4x4.row(3) << 0, 0, 0, 1;
+
+	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++)
+	{
+		m_CalibParams[cam_num].m_Trans = m_CalibParams[cam_num].m_RotMatrix * (-refR.inverse() * refT) + m_CalibParams[cam_num].m_Trans;
+		m_CalibParams[cam_num].m_RotMatrix *= refR.inverse();
+
+		m_CalibParams[cam_num].m_ProjMatrix = compute_projection_matrices(cam_num);
+	}
+	}
+
 
 }
 
@@ -592,6 +728,43 @@ void load_file_name(
 		_findnext(color_handle, &color_fd);
 		_findnext(depth_handle, &depth_fd);
 	}
+
+	_findclose(color_handle);
+	_findclose(depth_handle);
+}
+
+void load_file_name_mode4(
+	vector<vector<string>>& color_names,
+	vector<vector<string>>& depth_names)
+{
+	string cam_path = path;
+	intptr_t color_handle, depth_handle;
+
+	int cnt = 0;
+	struct _finddata_t color_fd, depth_fd;
+
+	string color_path = cam_path + "\\image" + "\\*.png";
+	string depth_path = cam_path + "\\depth" + "\\*.png";
+
+	color_handle = _findfirst(color_path.c_str(), &color_fd);
+	depth_handle = _findfirst(depth_path.c_str(), &depth_fd);
+
+	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++)
+	{
+		for (int frame_num = 0; frame_num < total_num_frames; frame_num++)
+		{
+			color_names[cam_num][frame_num] = color_fd.name;
+			depth_names[cam_num][frame_num] = depth_fd.name;
+
+			_findnext(color_handle, &color_fd);
+			_findnext(depth_handle, &depth_fd);
+		}
+	}
+
+	//for (int cam_num = 0; cam_num < total_num_cameras; cam_num++)
+	//{
+	//   cout << color_names[cam_num][0] << endl;
+	//}
 
 	_findclose(color_handle);
 	_findclose(depth_handle);
