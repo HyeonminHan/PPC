@@ -84,7 +84,7 @@ int main()
 		//color_names.resize(MAXNUM_11X11);
 		//depth_names.resize(MAXNUM_11X11);
 
-		for (int i = 0; i < MAXNUM_5X5; i++) { //MAXNUM_11X11
+		for (int i = 0; i < MAXNUM_9X9; i++) { //MAXNUM_11X11
 			vector<string> temp_vec1, temp_vec2;
 			temp_vec1.resize(total_num_frames);
 			temp_vec2.resize(total_num_frames);
@@ -138,7 +138,7 @@ int main()
 
 #ifdef TEST
 	for(version = 2.1 ; version <= 2.2 ; version += 0.1){
-		for (ppc_mode = 1; ppc_mode <= 1; ppc_mode++) {
+		for (ppc_mode = 0; ppc_mode <= 1; ppc_mode++) {
 			for (colorspace = 0; colorspace <= 2; colorspace++) {
 				for (voxel_mode = 3; voxel_mode <= 3; voxel_mode++) {
 					//ppc mode --- 0 : only incremental, 1 : incremental + voxelized, 2 : batch + voxelized
@@ -251,9 +251,11 @@ int main()
 						if (ppc_mode == 0) { //only incremental
 							Plen_PC = make_sequenced_Plen_PC(color_imgs, depth_imgs, colorspace, camera_order);
 							cout << "Size of incremental PPC : " << Plen_PC.size() << endl;
+
 #ifdef TEST			
 							fout_data << "," << Plen_PC.size() << ",,";
 #endif
+
 						}
 						else if (ppc_mode == 1) { //incremental + voxelized
 							Plen_PC = make_sequenced_Plen_PC(color_imgs, depth_imgs, colorspace, camera_order);
@@ -268,15 +270,18 @@ int main()
 
 							cout << "Size of incremental PPC : " << Plen_PC.size() << endl;
 							increPPC_size = Plen_PC.size();
+
 #ifdef TEST
 							fout_data << Plen_PC.size() << ",";
 #endif
+
 							Plen_PC = make_voxelized_Plen_PC2(Plen_PC, voxel_div_num);
 							cout << "Size of incremental + voxelized PPC : " << Plen_PC.size() << endl;
 
 #ifdef TEST
 							fout_data << Plen_PC.size() << "," << 100 - ((float)Plen_PC.size() / increPPC_size * 100) << "%,";
 #endif
+
 						}
 						else if (ppc_mode == 2) { //batch + voxelized
 							vector<PointCloud<PointXYZRGB>::Ptr> pointclouds;
@@ -286,17 +291,15 @@ int main()
 						}
 
 						clock_t t6 = clock();
-
 						cout << float(t6 - t5) / CLOCKS_PER_SEC << endl;
-
 
 #ifdef TEST
 
 						vector<vector<float>> dev_pointnum(total_num_cameras, vector<float>(5));
 						vector<float> point_num_per_color(total_num_cameras);
-						//YUV_dev(Plen_PC, dev_pointnum, point_num_per_color);
+						YUV_dev(Plen_PC, dev_pointnum, point_num_per_color);
 
-						/*for (int i = 0; i < total_num_cameras; i++)
+						for (int i = 0; i < total_num_cameras; i++)
 							fout_dev << "," << point_num_per_color[i]
 							<< "," << dev_pointnum[i][0]
 							<< "," << dev_pointnum[i][1]
@@ -304,7 +307,7 @@ int main()
 							<< "," << dev_pointnum[i][3]
 							<< "," << dev_pointnum[i][4] << ",";
 
-						fout_dev << "\n";*/
+						fout_dev << "\n";
 #endif
 						//저장 및 로드 
 						vector<PPC*> vec_ppc_temp;
@@ -351,7 +354,7 @@ int main()
 						printPSNRWithoutBlackPixel_2(color_imgs, projection_imgs, psnrs_p, num_holes);
 						printPSNRWithBlackPixel_2(color_imgs, filled_imgs, psnrs_h);
 
-						for (int i = 0; i < filled_imgs.size(); i++) {
+						/*for (int i = 0; i < filled_imgs.size(); i++) {
 							imshow("filled_img", filled_imgs[i]);
 
 							Mat viewImg;
@@ -359,7 +362,7 @@ int main()
 
 							imshow("viewImg", viewImg);
 							waitKey(0);
-						}
+						}*/
 
 						//exit(1);
 #ifdef TEST
@@ -382,6 +385,7 @@ int main()
 						color_imgs.clear();
 						depth_imgs.clear();
 						//pointclouds.clear();
+						exit(1);
 					}
 
 #ifdef TEST
@@ -389,6 +393,8 @@ int main()
 
 					fout_data.close();
 					fout_dev.close();
+
+					
 				}
 			}
 

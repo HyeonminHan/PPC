@@ -14,7 +14,16 @@ void load_matrix_data();
 void compute_projection_matrices();
 void load_file_name(vector<vector<string>> &color_names, vector<vector<string>> &depth_names);
 void load_file_name(vector<string> &color_names_, vector<string> &depth_names_);
+void load_file_name_mode4(vector<vector<string>>& color_names, vector<vector<string>>& depth_names);
 void GetRotationMat(Vector3d& euler, Matrix3d& rotationMat);
 void Quaternion2RotationMat(Vector4d& quaternion, Matrix3d& rotationMat);
 void Euler2RotationMat(Vector3d& euler, Matrix3d& rotationMat);
 void get_RT_data_json(const char* file, vector<Vector3d>& Rotation_vec, vector<Vector3d>& Position_vec, vector<Vector3d>& KFocal_vec, vector<Vector3d>& KPrinciple_vec, int total_num_cameras);
+void get_RT_data_json(
+	const char* file,
+	vector<Vector3d>& Rotation_vec,
+	vector<Vector3d>& Position_vec,
+	vector<Vector2d>& Depth_vec,
+	vector<Vector3d>& KFocal_vec,
+	vector<Vector3d>& KPrinciple_vec,
+	int total_num_cameras);

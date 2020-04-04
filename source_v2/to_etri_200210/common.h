@@ -4,9 +4,10 @@
 
 double depth_level_2_Z(unsigned char d);
 double depth_level_2_Z_s(unsigned short d);
-double denormalization_c(unsigned char norm, double Min, double Max);
-double denormalization_s(unsigned short norm, double Min, double Max);
-unsigned short normalization_s(double denorm, double Min, double Max);
+double depth_level_2_Z_s(unsigned short d, int camera);
+double depth_level_2_Z_s_direct(unsigned short d);
+double dequantization(unsigned short norm, double Min, double Max);
+unsigned short quantization(double denorm, double Min, double Max);
 void projection_UVZ_2_XY_PC(Matrix4d projMatrix, double u, double v, double z, double *x, double *y);
 double MVG(Matrix3d K, Matrix3d R, Matrix3Xd t, int x, int y, double Z, double *X, double *Y);
 bool confirm_point(int camera, PointXYZRGB p, vector<Mat> color_imgs);
@@ -18,12 +19,24 @@ Mat cvt_yuv2bgr(
 	bool is_yuv = true);
 PointCloud<PointXYZRGB>::Ptr make_PC(int camera, Mat color_img, Mat depth_img);
 vector<PointCloud<PointXYZRGB>::Ptr> get_PC_of_every_camera(
+	int frame, 
+	vector<vector<string>> color_names, 
+	vector<vector<string>> depth_names, 
+	vector<Mat> &color_imgs, 
+	vector<Mat> &depth_imgs);
+vector<PointCloud<PointXYZRGB>::Ptr> get_PC_of_every_camera(
+	int frame,
+	vector<string> color_names_,
+	vector<string> depth_names_,
+	vector<Mat> &color_imgs,
+	vector<Mat> &depth_imgs);	
+void get_color_and_depth_imgs(
 	int frame,
 	vector<vector<string>> color_names,
 	vector<vector<string>> depth_names,
 	vector<Mat> &color_imgs,
 	vector<Mat> &depth_imgs);
-vector<PointCloud<PointXYZRGB>::Ptr> get_PC_of_every_camera(
+void get_color_and_depth_imgs(
 	int frame,
 	vector<string> color_names_,
 	vector<string> depth_names_,
@@ -31,15 +44,42 @@ vector<PointCloud<PointXYZRGB>::Ptr> get_PC_of_every_camera(
 	vector<Mat> &depth_imgs);
 PointCloud<PointXYZRGB>::Ptr make_registered_PC(vector<PointCloud<PointXYZRGB>::Ptr> pointclouds);
 void find_min_max(PointCloud<PointXYZRGB>::Ptr source_PC, vector<float> &min, vector<float> &max);
-void find_min_max(vector<PPC> source_PC, vector<float> &min, vector<float> &max);
+void find_min_max(
+	vector<PPC> source_PC,
+	vector<float> &min,
+	vector<float> &max);
 void view_PC(PointCloud<PointXYZRGB>::Ptr pointcloud);
+void view_PC_yuvTorgb(PointCloud<PointXYZRGB>::Ptr pointcloud);
+void view_PC(PointCloud<PointXYZRGB>::Ptr pointcloud, int cam_idx);
 void view_PC(PointCloud<PointXYZRGB>::Ptr pointcloud1, PointCloud<PointXYZRGB>::Ptr pointcloud2);
 void projection(PointCloud<PointXYZRGB>::Ptr pointcloud, int camera, Mat &img, Mat &depthimg);
 double det(double mat[3][3]);
 void printPSNRWithBlackPixel(Mat orig_img, Mat proj_img);
 void printPSNRWithBlackPixel(vector<Mat> orig_imgs, vector<Mat> proj_imgs);
+void printPSNRWithBlackPixel(vector<Mat> orig_imgs, vector<Mat> proj_imgs, vector<float> &psnrs_y, vector<float>& psnrs_u, vector<float>& psnrs_v);
 void printPSNRWithoutBlackPixel(Mat orig_img, Mat proj_img);
 void printPSNRWithoutBlackPixel(vector<Mat> orig_imgs, vector<Mat> proj_imgs);
+void printPSNRWithoutBlackPixel(vector<Mat> orig_imgs, vector<Mat> proj_imgs, vector<float>& psnrs_y, vector<float>& psnrs_u, vector<float>& psnrs_v, vector<int> &num_holes);
+void printPSNRWithBlackPixel(
+	vector<Mat> orig_imgs,
+	vector<Mat> proj_imgs,
+	vector<float> &psnrs_y,
+	vector<float>& psnrs_u,
+	vector<float>& psnrs_v);
+void printPSNRWithoutBlackPixel(
+	vector<Mat> orig_imgs,
+	vector<Mat> proj_imgs,
+	vector<float>& psnrs,
+	vector<int>& num_holes);
+void printPSNRWithBlackPixel_2(
+	vector<Mat> orig_imgs,
+	vector<Mat> proj_imgs,
+	vector<float>& psnrs);
+void printPSNRWithoutBlackPixel_2(
+	vector<Mat> orig_imgs,
+	vector<Mat> proj_imgs,
+	vector<float>& psnrs,
+	vector<int> &num_holes);
 void back_projection(PointCloud<PointXYZRGB>::Ptr pointcloud, int camera, Mat &img, int nNeighbor);
 double projection_XYZ_2_UV(Matrix4d projMatrix, double x, double y, double z, int& u, int& v);
 double find_point_dist(double w, int camera);

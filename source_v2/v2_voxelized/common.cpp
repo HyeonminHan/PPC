@@ -10,7 +10,7 @@ vector<int> make_camOrder(int refView) {
 		camera_order.push_back(refView);
 
 		for (int i = 1; i < total_num_cameras / 2 + 1; i++) {
-			if (i % 5 == 3) temp += 17; //11-  11, 6 , 11  / 5 - 5, 3, 17 / 9 - 9, 5, 13
+			if (i % 9 == 5) temp += 13; //11-  11, 6 , 11  / 5 - 5, 3, 17 / 9 - 9, 5, 13
 			else temp++;
 			camera_order.push_back(refView - temp);
 			camera_order.push_back(refView + temp);
@@ -2832,7 +2832,6 @@ void YUV_dev(vector<PPC*> PPC, vector<vector<float>>& dev_pointnum_percent, vect
 			dev_pointnum_percent[cam][i] = dev_pointnum_percent[cam][i] / (float)point_num_per_color[cam] * 100;
 		}
 	}
-
 
 	int total = 0;
 

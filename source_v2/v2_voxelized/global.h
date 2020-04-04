@@ -8,6 +8,7 @@
 #define Technicolor_Painter 3
 #define hotelroom_r2_front_sample 4
 
+
 #define TEST
 #define MAXNUM_11X11 331
 #define MAXNUM_9X9 309

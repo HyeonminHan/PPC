@@ -38,6 +38,7 @@ void set_parameters(int data_mode)
 		MinZ = 42.0;
 		MaxZ = 130.0;
 
+		//scaleZ = 0;
 		color_bits = 8;
 		depth_bits = 8;
 
@@ -55,6 +56,7 @@ void set_parameters(int data_mode)
 
 		MinZ = 3.5;
 		MaxZ = 7.0;
+		//scaleZ = 0;
 
 		color_bits = 8;
 		depth_bits = 16;
@@ -73,6 +75,7 @@ void set_parameters(int data_mode)
 
 		MinZ = 0.3;
 		MaxZ = 1.62;
+		//scaleZ = 0;
 
 		color_bits = 10;
 		depth_bits = 16;
@@ -91,6 +94,7 @@ void set_parameters(int data_mode)
 
 		MinZ = 1.773514;
 		MaxZ = 5.300389;
+		//scaleZ = 0;
 
 		color_bits = 10;
 		depth_bits = 16;
@@ -101,7 +105,7 @@ void set_parameters(int data_mode)
 
 	case hotelroom_r2_front_sample:
 		//total_num_cameras = 21 * 21;
-		total_num_cameras = 25; //121
+		total_num_cameras = 81; //121
 		total_num_frames = 1;
 
 		_width = 3840;
@@ -116,6 +120,46 @@ void set_parameters(int data_mode)
 
 		path = rootDir + "hotelroom_r2_front_sample";
 		break;
+
+	//case S02_H2:
+	//	total_num_cameras = 21 * 21;
+	//	total_num_cameras = 25; //121
+	//	total_num_frames = 1;
+	//	_width = 3840;
+	//	_height = 2160;
+	//	MinZ = 0;
+	//	MaxZ = 0;
+	//	scaleZ = 10000;
+	//	color_bits = 10;
+	//	depth_bits = 16;
+	//	path = rootDir + "S02_H2";
+	//	break;
+	//case S07_R3:
+	//	total_num_cameras = 21 * 21;
+	//	total_num_cameras = 25; //121
+	//	total_num_frames = 1;
+	//	_width = 3840;
+	//	_height = 2160;
+	//	MinZ = 0;
+	//	MaxZ = 0;
+	//	scaleZ = 1000;
+	//	color_bits = 10;
+	//	depth_bits = 16;
+	//	path = rootDir + "S07_R3";
+	//	break;
+	//case S09_A1:
+	//	total_num_cameras = 21 * 21;
+	//	total_num_cameras = 25; //121
+	//	total_num_frames = 1;
+	//	_width = 3840;
+	//	_height = 2160;
+	//	MinZ = 0;
+	//	MaxZ = 0;
+	//	scaleZ = 10000;
+	//	color_bits = 10;
+	//	depth_bits = 16;
+	//	path = rootDir + "S09_A1";
+	//	break;
 	default:
 		cerr << "Wrong data_mode!!!" << endl;
 		exit(0);
@@ -360,7 +404,7 @@ void load_matrix_data()
 		
 		}
 	}
-	else if (data_mode == hotelroom_r2_front_sample)
+	else if (data_mode == hotelroom_r2_front_sample /*|| data_mode == S02_H2 || data_mode == S07_R3 || data_mode == S09_A1*/)
 	{
 		vector<CalibStruct> temp_CalibParams(total_num_cameras);
 		vector<Vector3d> R_vec;
@@ -409,7 +453,9 @@ void load_matrix_data()
 				case 2://Py
 					P_[1] = token_int;
 					break;
-				case 4://Pz
+				case 4 :
+				case 5 :
+				case 6 ://Pz
 					P_[2] = token_int;
 					break;
 				}
@@ -808,7 +854,7 @@ void load_file_name_mode4(
 	depth_handle = _findfirst(depth_path.c_str(), &depth_fd);
 
 	if (referenceView == 220) {
-		for (int cam_num = 0; cam_num < MAXNUM_5X5; cam_num++) //MAXNUM_11X11
+		for (int cam_num = 0; cam_num < MAXNUM_9X9; cam_num++) //MAXNUM_11X11
 		{
 			for (int frame_num = 0; frame_num < total_num_frames; frame_num++)
 			{
@@ -887,7 +933,9 @@ void get_RT_data_json(const char* file, vector<Vector3d>& Rotation_vec, vector<V
 				break;
 			case 3://!< object
 				break;
-			case 4://!< array
+			case 4:
+			//case 5:
+			//case 6://!< array
 
 				if ((R_name.compare(itr->name.GetString()) == 0))//Rotation
 				{
@@ -927,12 +975,12 @@ void get_RT_data_json(const char* file, vector<Vector3d>& Rotation_vec, vector<V
 				}
 
 				break;
-			case 5://!< string
+			//case 5://!< string
 			   //cout << itr->name.GetString() << " : " << itr->value.GetString() << endl;
-				break;
-			case 6://!< number
+			//	break;
+			//case 6://!< number
 			   //cout << itr->name.GetString() << " : " << itr->value.GetInt() << endl;
-				break;
+			//	break;
 			}
 		}
 	}
@@ -990,7 +1038,9 @@ void get_RT_data_json(
 
 			switch (itr->value.GetType())
 			{
-			case 4://!< array
+			case 4:
+			//case 5: 
+			//case 6://!< array
 
 				if ((R_name.compare(itr->name.GetString()) == 0))//Rotation
 				{
