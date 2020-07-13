@@ -24,6 +24,15 @@ vector<PPC*> make_incremental_Plen_PC(
 	int voxel_div_num, 
 	float& depth_threshold);
 
+vector<PPC*> make_incremental_Plen_PC(
+	vector<Mat> color_imgs,
+	vector<Mat> depth_imgs,
+	int colorspace,
+	vector<int> camera_order,
+	int voxel_div_num,
+	float& depth_threshold,
+	int cololr_threshold);
+
 vector<PPC*> make_voxelized_Plen_PC(
 	vector<PointCloud<PointXYZRGB>::Ptr> pointclouds,
 	int voxel_div_num);

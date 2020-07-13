@@ -316,9 +316,9 @@ vector<PPC*> make_incremental_Plen_PC(
 	cout << "range of Z : " << max[2] - min[2] << endl;
 
 	float Cube_z_size = max[2] - min[2];
-	float cube_z_size = Cube_z_size / voxel_div_num;
+	float cube_z_size = Cube_z_size / 256;
 	//////////////////////////////////////////
-	depth_threshold = cube_z_size/10000;
+	depth_threshold = cube_z_size;
 	//////////////////////////////////////////
 	cout << "depth_threshold : " << depth_threshold << endl;
 
@@ -532,6 +532,307 @@ vector<PPC*> make_incremental_Plen_PC(
 
 							// color thres
 							if (abs(sub_B) < c_threshold && abs(sub_G) < c_threshold && abs(sub_R) < c_threshold) {
+								Plen_PC[point_idx]->SetColor(color, cam);
+							}
+							else {
+								PPC* point_ppc;
+								if (version == 1.0) point_ppc = new PPC_v1();
+								else if (version == 2.1) point_ppc = new PPC_v2_1();
+								else if (version == 2.2) point_ppc = new PPC_v2_2();
+
+								float geo[3] = { X,Y,Z };
+								point_ppc->SetGeometry(geo);
+								if (version == 2.1) point_ppc->SetRefColor(color, cam);
+								else if (version == 1.0 || version == 2.2) point_ppc->SetColor(color, cam);
+
+								Plen_PC.push_back(point_ppc);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		//cout << "max_dist : " << max_dist << endl;
+	}
+
+	Plen_PC.shrink_to_fit();
+
+	return Plen_PC;
+}
+
+vector<PPC*> make_incremental_Plen_PC(
+	vector<Mat> color_imgs,
+	vector<Mat> depth_imgs,
+	int colorspace,
+	vector<int> camera_order,
+	int voxel_div_num,
+	float& depth_threshold,
+	int color_threshold)
+{
+	/////////////////////////
+	if (color_threshold == 0) color_threshold = INT_MAX;
+	/////////////////////////
+
+	vector<PPC*> Plen_PC;
+	PointCloud<PointXYZRGB>::Ptr firstPC;
+
+	firstPC = make_PC(0, color_imgs[0], depth_imgs[0]);
+
+	// 첫번째 view 
+	for (int point_idx = 0; point_idx < firstPC->points.size(); point_idx++) {
+		PPC* point_ppc;
+
+		if (version == 1.0) point_ppc = new PPC_v1();
+		else if (version == 2.1) point_ppc = new PPC_v2_1();
+		else if (version == 2.2) point_ppc = new PPC_v2_2();
+
+		point_ppc->SetGeometry(firstPC->points[point_idx]);
+
+		if (version == 2.1) point_ppc->SetRefColor(firstPC->points[point_idx], 0);
+		else if (version == 1.0 || version == 2.2) point_ppc->SetColor(firstPC->points[point_idx], 0);
+
+		Plen_PC.push_back(point_ppc);
+	}
+
+	vector<float> min(3), max(3);
+	find_min_max(Plen_PC, min, max);
+
+	cout << "range of Z : " << max[2] - min[2] << endl;
+
+	float Cube_z_size = max[2] - min[2];
+	float cube_z_size = Cube_z_size / 256;
+	//////////////////////////////////////////
+	depth_threshold = cube_z_size;
+	//////////////////////////////////////////
+	cout << "depth_threshold : " << depth_threshold << endl;
+
+	for (int i = 1; i < total_num_cameras; i++) {
+		cout << "cam_num : " << i << endl;
+		int cam = i;// camera_order[i];
+
+		int u;
+		int v;
+
+		double w;
+
+		Mat color_img(_height, _width, CV_8UC3, Scalar(0));
+		Mat confirm_img(_height, _width, CV_32S, -1);
+
+		Vec3b d;
+		Vec3s d_s;
+
+		for (int point_idx = 0; point_idx < Plen_PC.size(); point_idx++) {
+			float* geometry = Plen_PC[point_idx]->GetGeometry();
+
+			double X = geometry[0];
+			double Y = geometry[1];
+			double Z = geometry[2];
+
+			w = projection_XYZ_2_UV(
+				m_CalibParams[cam].m_ProjMatrix,
+				X,
+				Y,
+				Z,
+				u,
+				v);
+
+			if ((u < 0) || (v < 0) || (u > _width - 1) || (v > _height - 1)) continue;
+
+			confirm_img.at<int>(v, u) = point_idx;
+		}
+
+		double max_dist = 0.;
+
+		for (int v = 0; v < _height; v++) {
+			for (int u = 0; u < _width; u++) {
+				Vec3b color = color_imgs[cam].at<Vec3b>(v, u);
+
+				double X;
+				double Y;
+				double Z;
+
+				switch (data_mode) {
+				case 0:
+					d = depth_imgs[cam].at<Vec3b>(v, u);
+					Z = depth_level_2_Z(d[0]);
+					break;
+				case 1:
+				case 2:
+					d_s = depth_imgs[cam].at<Vec3s>(v, u);
+					Z = depth_level_2_Z_s(d_s[0]);
+					break;
+				case 3:
+					d_s = depth_imgs[cam].at<Vec3s>(v, u);
+					Z = depth_level_2_Z_s(d_s[0], cam);
+					break;
+				case 4:
+				case 5:
+				case 6:
+				case 7:
+				case 8:
+				case 9:
+				case 10:
+				case 11:
+				case 12:
+				case 13:
+					Z = depth_level_2_Z_s_direct(depth_imgs[cam].at<ushort>(v, u));
+					break;
+				}
+
+				double Z_origin = Z;
+				if (!data_mode) projection_UVZ_2_XY_PC(m_CalibParams[cam].m_ProjMatrix, u, v, Z, &X, &Y);
+				else Z = MVG(m_CalibParams[cam].m_K, m_CalibParams[cam].m_RotMatrix, m_CalibParams[cam].m_Trans, u, v, Z, &X, &Y);
+
+				//if ((data_mode == 8 || data_mode == 9) && depth_imgs[cam].at<ushort>(v, u) >= 9000) continue;
+
+				// projection not ok
+				if (confirm_img.at<int>(v, u) == -1) {
+
+					PPC* point_ppc;
+					if (version == 1.0) point_ppc = new PPC_v1();
+					else if (version == 2.1) point_ppc = new PPC_v2_1();
+					else if (version == 2.2) point_ppc = new PPC_v2_2();
+
+					float geo[3] = { X,Y,Z };
+					point_ppc->SetGeometry(geo);
+					if (version == 2.1) point_ppc->SetRefColor(color, cam);
+					else if (version == 1.0 || version == 2.2) point_ppc->SetColor(color, cam);
+
+					Plen_PC.push_back(point_ppc);
+				}
+				// projection ok
+				else
+				{
+					int point_idx = confirm_img.at<int>(v, u);
+
+					int nearCamNum = 0;
+					for (int c = cam - 1; c >= 0; c--) {
+						if (!Plen_PC[point_idx]->CheckOcclusion(c)) {
+							nearCamNum = c;
+							break;
+						}
+					}
+
+					double w_origin, w_point;
+
+					w_origin = m_CalibParams[cam].m_ProjMatrix(2, 0) * X + m_CalibParams[cam].m_ProjMatrix(2, 1) * Y +
+						m_CalibParams[cam].m_ProjMatrix(2, 2) * Z + m_CalibParams[cam].m_ProjMatrix(2, 3);
+
+					float* geo = Plen_PC[point_idx]->GetGeometry();
+
+					w_point = m_CalibParams[cam].m_ProjMatrix(2, 0) * geo[0] + m_CalibParams[cam].m_ProjMatrix(2, 1) * geo[1] +
+						m_CalibParams[cam].m_ProjMatrix(2, 2) * geo[2] + m_CalibParams[cam].m_ProjMatrix(2, 3);
+
+					double sub_dist = find_point_dist(w_point, cam) - find_point_dist(w_origin, cam);
+
+					if (max_dist < sub_dist) max_dist = sub_dist;
+
+					if (abs(sub_dist) > depth_threshold) {
+						PPC* point_ppc;
+						if (version == 1.0) point_ppc = new PPC_v1();
+						else if (version == 2.1) point_ppc = new PPC_v2_1();
+						else if (version == 2.2) point_ppc = new PPC_v2_2();
+
+						float geo[3] = { X,Y,Z };
+						point_ppc->SetGeometry(geo);
+						if (version == 2.1) point_ppc->SetRefColor(color, cam);
+						else if (version == 1.0 || version == 2.2) point_ppc->SetColor(color, cam);
+
+						Plen_PC.push_back(point_ppc);
+					}
+					else {
+
+						if (colorspace == 0) { //YUV
+							int sub_V = color[2] - Plen_PC[point_idx]->GetColor(nearCamNum)[0];
+							int sub_U = color[1] - Plen_PC[point_idx]->GetColor(nearCamNum)[1];
+
+							// color thres
+							if (abs(sub_U) < color_threshold && abs(sub_V) < color_threshold) {
+								Plen_PC[point_idx]->SetColor(color, cam);
+							}
+							else {
+								PPC* point_ppc;
+								if (version == 1.0) point_ppc = new PPC_v1();
+								else if (version == 2.1) point_ppc = new PPC_v2_1();
+								else if (version == 2.2) point_ppc = new PPC_v2_2();
+
+								float geo[3] = { X,Y,Z };
+								point_ppc->SetGeometry(geo);
+								if (version == 2.1) point_ppc->SetRefColor(color, cam);
+								else if (version == 1.0 || version == 2.2) point_ppc->SetColor(color, cam);
+
+								Plen_PC.push_back(point_ppc);
+							}
+						}
+						else if (colorspace == 1) { //HSV
+
+							Mat hsv_org(1, 1, CV_8UC3);
+							hsv_org.at<Vec3b>(0, 0) = color;
+							cvtColor(hsv_org, hsv_org, CV_YUV2BGR);
+							cvtColor(hsv_org, hsv_org, CV_BGR2HSV);
+
+							Mat hsv_ppc(1, 1, CV_8UC3);
+							hsv_ppc.at<Vec3b>(0, 0)[0] = Plen_PC[point_idx]->GetColor(nearCamNum)[2];
+							hsv_ppc.at<Vec3b>(0, 0)[1] = Plen_PC[point_idx]->GetColor(nearCamNum)[1];
+							hsv_ppc.at<Vec3b>(0, 0)[2] = Plen_PC[point_idx]->GetColor(nearCamNum)[0];
+							cvtColor(hsv_ppc, hsv_ppc, CV_YUV2BGR);
+							cvtColor(hsv_ppc, hsv_ppc, CV_BGR2HSV);
+
+							int sub_H = hsv_org.at<Vec3b>(0, 0)[0] - hsv_ppc.at<Vec3b>(0, 0)[0];
+							int sub_S = hsv_org.at<Vec3b>(0, 0)[1] - hsv_ppc.at<Vec3b>(0, 0)[1];
+
+							// color thres
+							if (abs(sub_H) < color_threshold && abs(sub_S) < color_threshold) {
+								Plen_PC[point_idx]->SetColor(color, cam);
+							}
+							else {
+								PPC* point_ppc;
+								if (version == 1.0) point_ppc = new PPC_v1();
+								else if (version == 2.1) point_ppc = new PPC_v2_1();
+								else if (version == 2.2) point_ppc = new PPC_v2_2();
+
+								float geo[3] = { X,Y,Z };
+								point_ppc->SetGeometry(geo);
+								if (version == 2.1) point_ppc->SetRefColor(color, cam);
+								else if (version == 1.0 || version == 2.2) point_ppc->SetColor(color, cam);
+
+								Plen_PC.push_back(point_ppc);
+							}
+						}
+						else if (colorspace == 2) { //RGB
+
+							Mat bgr_org(1, 1, CV_8UC3);
+							bgr_org.at<Vec3b>(0, 0) = color;//YUV
+							cvtColor(bgr_org, bgr_org, CV_YUV2BGR);
+
+							float total_org = (int)bgr_org.at<Vec3b>(0, 0)[0] + (int)bgr_org.at<Vec3b>(0, 0)[1] + (int)bgr_org.at<Vec3b>(0, 0)[2];
+
+							uchar bgr_org_norm_b = uchar(bgr_org.at<Vec3b>(0, 0)[0] / total_org * 255);
+							uchar bgr_org_norm_g = uchar(bgr_org.at<Vec3b>(0, 0)[1] / total_org * 255);
+							uchar bgr_org_norm_r = uchar(bgr_org.at<Vec3b>(0, 0)[2] / total_org * 255);
+
+							Mat bgr_ppc(1, 1, CV_8UC3);
+							bgr_ppc.at<Vec3b>(0, 0)[0] = Plen_PC[point_idx]->GetColor(nearCamNum)[2];//Y
+							bgr_ppc.at<Vec3b>(0, 0)[1] = Plen_PC[point_idx]->GetColor(nearCamNum)[1];//U
+							bgr_ppc.at<Vec3b>(0, 0)[2] = Plen_PC[point_idx]->GetColor(nearCamNum)[0];//V
+							cvtColor(bgr_ppc, bgr_ppc, CV_YUV2BGR);
+
+							float total_ppc = (int)bgr_ppc.at<Vec3b>(0, 0)[0] + (int)bgr_ppc.at<Vec3b>(0, 0)[1] + (int)bgr_ppc.at<Vec3b>(0, 0)[2];
+
+							uchar bgr_ppc_norm_b = uchar(bgr_ppc.at<Vec3b>(0, 0)[0] / total_ppc * 255);
+							uchar bgr_ppc_norm_g = uchar(bgr_ppc.at<Vec3b>(0, 0)[1] / total_ppc * 255);
+							uchar bgr_ppc_norm_r = uchar(bgr_ppc.at<Vec3b>(0, 0)[2] / total_ppc * 255);
+
+							//cout << (int)bgr_org_norm_b - (int)bgr_ppc_norm_b << "\t" << (int)bgr_org_norm_g - (int)bgr_ppc_norm_g << "\t" << (int)bgr_org_norm_r - (int)bgr_ppc_norm_r << "\t" <<endl ;
+
+
+							int sub_B = (int)bgr_org_norm_b - (int)bgr_ppc_norm_b;
+							int sub_G = (int)bgr_org_norm_g - (int)bgr_ppc_norm_g;
+							int sub_R = (int)bgr_org_norm_r - (int)bgr_ppc_norm_r;
+
+							// color thres
+							if (abs(sub_B) < color_threshold && abs(sub_G) < color_threshold && abs(sub_R) < color_threshold) {
 								Plen_PC[point_idx]->SetColor(color, cam);
 							}
 							else {
