@@ -1278,7 +1278,7 @@ vector<PPC*> make_formulaic_voxelized_Plen_PC2(
 	////////////////////////////////
 
 
-	//////////////all PC////////////
+	////////////////////all PC//////////////////
 	unsigned long long x_voxel_index;
 	unsigned long long y_voxel_index;
 	unsigned long long z_voxel_index;
