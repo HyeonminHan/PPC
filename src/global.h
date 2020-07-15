@@ -1,5 +1,5 @@
 #pragma once
-
+#define _SECURE_SCL 0 
 #define BOOST_TYPEOF_EMULATION
 
 #define MSR3DVideo_Ballet 0

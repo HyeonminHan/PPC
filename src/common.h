@@ -59,7 +59,7 @@ void view_PC_yuvTorgb(PointCloud<PointXYZRGB>::Ptr pointcloud);
 void view_PC(PointCloud<PointXYZRGB>::Ptr pointcloud, int cam_idx);
 void view_PC(PointCloud<PointXYZRGB>::Ptr pointcloud1, PointCloud<PointXYZRGB>::Ptr pointcloud2);
 void projection(PointCloud<PointXYZRGB>::Ptr pointcloud, int camera, Mat &img, Mat &depthimg, Mat& is_hole_img);
-void projection_bypoint(PointXYZRGB p, int camera, Mat& img, Mat& dist_img);
+void projection_bypoint(PointXYZRGB p, int camera, Mat& img, Mat& dist_img, Mat& is_hole_img);
 double det(double mat[3][3]);
 void printPSNRWithBlackPixel_RGB(Mat orig_img, Mat proj_img);
 void printPSNRWithBlackPixel_RGB(vector<Mat> orig_imgs, vector<Mat> proj_imgs, vector<Mat>is_hole_filled_imgs, vector<float>& psnrs_b,vector<float>& psnrs_g,vector<float>& psnrs_r, vector<int>& num_holes);

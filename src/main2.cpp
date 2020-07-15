@@ -41,9 +41,9 @@ int main()
 
 	///////input///////
 	version = 1.0;
-	data_mode = 4;
+	data_mode = 5;
 	int ppc_mode = 3;
-	mask_size = 5; // 3 -> 3x3 / 5 -> 5x5 / ... / 11 -> 11x11
+	mask_size = 11; // 3 -> 3x3 / 5 -> 5x5 / ... / 11 -> 11x11
 	int voxel_div_num = 8192;
 	///////////////////
 
@@ -66,7 +66,7 @@ int main()
 #endif
 
 #ifdef TEST
-	vector<int> datas = { 4 };
+	vector<int> datas = { 5 };
 	for (int data_i = 0; data_i < datas.size(); data_i++) {
 		data_mode = datas[data_i];
 #endif
@@ -170,7 +170,7 @@ int main()
 		vector<int> voxel_div_nums = { 8192 };
 		for (int voxel_i = 0; voxel_i < voxel_div_nums.size(); voxel_i++) {
 			voxel_div_num = voxel_div_nums[voxel_i];
-			for (ppc_mode = 1; ppc_mode <= 1; ppc_mode++) {
+			for (ppc_mode = 3; ppc_mode <= 3; ppc_mode++) {
 				if (ppc_mode == 2) continue;
 
 				cout << " ============================= " << endl;
@@ -248,20 +248,20 @@ int main()
 
 #ifdef TEST
 					fout_data << _width * _height * total_num_cameras << ",";
+					int increPPC_size = 0;
 #endif
 					vector<PPC*> Plen_PC;
 					int ppc_number = 0;
 
 					clock_t t5 = clock();
 
-					int increPPC_size = 0;
 					cout << "voxel_div_num : " << voxel_div_num << endl;
 					if (ppc_mode == 1) {
 						float depth_threshold;
 						Plen_PC = make_incremental_Plen_PC(color_imgs, depth_imgs, colorspace, camera_order, voxel_div_num, depth_threshold);
 						cout << "Size of incremental PPC : " << Plen_PC.size() << endl << endl;
-						increPPC_size = Plen_PC.size();
 #ifdef TEST
+						increPPC_size = Plen_PC.size();
 						fout_data << depth_threshold << "," << Plen_PC.size() << ",";
 #endif
 						vector<float> Cube_size, cube_size;
@@ -370,7 +370,7 @@ int main()
 						vector<int> pointNum_Of_colorN(total_num_cameras, 0);
 						projection_PPC_with_hole_filling(Plen_PC, projection_imgs, filled_imgs, is_hole_proj_imgs, is_hole_filled_imgs, pointclouds_, nNeighbor, window_size);
 						
-						cout << "point size : " << pointclouds_[0]->points.size() << endl;
+						//cout << "point size : " << pointclouds_[0]->points.size() << endl;
 						clock_t t8 = clock();
 						cout << "projection and hole filling time: " << float(t8 - t7) / CLOCKS_PER_SEC << endl << endl;
 
@@ -386,10 +386,12 @@ int main()
 						/*for (int i = 0; i < filled_imgs.size(); i++) {
 							imshow("filled_img", filled_imgs[i]);
 
-							Mat viewImg;
-							cvtColor(filled_imgs[i], viewImg, CV_YUV2BGR);
+							Mat view_projImg, view_filledImg;
+							cvtColor(projection_imgs[i], view_projImg, CV_YUV2BGR);
+							cvtColor(filled_imgs[i], view_filledImg, CV_YUV2BGR);
 
-							imshow("viewImg", viewImg);
+							imshow("view_projImg", view_projImg);
+							imshow("view_filledImg", view_filledImg);
 							waitKey(0);
 						}*/
 #ifdef TEST

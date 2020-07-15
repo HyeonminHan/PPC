@@ -57,6 +57,13 @@ void make_proj_img_vec_ppc(
 	vector<PointCloud<PointXYZRGB>::Ptr>& pointclouds,
 	int nNeighbor);
 
+void make_proj_img_vec_ppc2(
+	vector<PPC*> PPC,
+	vector<Mat>& proj_img_vec,
+	vector<Mat>& is_hole_proj_imgs,
+	vector<PointCloud<PointXYZRGB>::Ptr>& pointclouds,
+	int nNeighbor);
+
 void projection_PPC_with_hole_filling(vector<PPC*> Plen_PC, vector<Mat> &projection_imgs, vector<Mat> &filled_imgs, vector<Mat>& is_hole_proj_imgs,
 	vector<Mat>& is_hole_filled_imgs, vector<PointCloud<PointXYZRGB>::Ptr> &pointclouds_,int nNeighbor, int window_size);
 

@@ -1054,7 +1054,7 @@ void projection(PointCloud<PointXYZRGB>::Ptr pointcloud, int camera, Mat& img, M
 		Y = cloudit->y;
 		Z = cloudit->z;
 
-		Z = Z;//-Z
+		//Z = Z;//-Z
 
 		w = projection_XYZ_2_UV(
 			m_CalibParams[camera].m_ProjMatrix,
@@ -1093,10 +1093,8 @@ void projection(PointCloud<PointXYZRGB>::Ptr pointcloud, int camera, Mat& img, M
 	}
 }
 
-void projection_bypoint(PointXYZRGB p, int camera, Mat& img, Mat& dist_img)
+void projection_bypoint(PointXYZRGB p, int camera, Mat& img, Mat& dist_img, Mat& is_hole_img)
 {
-	//Mat depthimg(_height, _width, CV_64F, -1);
-
 	int u;
 	int v;
 
@@ -1108,7 +1106,7 @@ void projection_bypoint(PointXYZRGB p, int camera, Mat& img, Mat& dist_img)
 	double Y = p.y;
 	double Z = p.z;
 
-	Z = -Z;
+	//Z = -Z;
 
 	w = projection_XYZ_2_UV(
 		m_CalibParams[camera].m_ProjMatrix,
@@ -1122,8 +1120,10 @@ void projection_bypoint(PointXYZRGB p, int camera, Mat& img, Mat& dist_img)
 
 	if ((u < 0) || (v < 0) || (u > _width - 1) || (v > _height - 1)) return;
 
-	if (dist_img.at<double>(v, u) == -1)
+	if (dist_img.at<double>(v, u) == -1) {
 		dist_img.at<double>(v, u) = dist;
+		is_hole_img.at<uchar>(v, u) = 0;
+	}
 	else
 	{
 		if (dist < dist_img.at<double>(v, u))
@@ -1132,9 +1132,9 @@ void projection_bypoint(PointXYZRGB p, int camera, Mat& img, Mat& dist_img)
 		else return;
 	}
 
-	img.at<Vec3b>(v, u)[0] = ushort(p.b);
-	img.at<Vec3b>(v, u)[1] = ushort(p.g);
-	img.at<Vec3b>(v, u)[2] = ushort(p.r);
+	img.at<Vec3b>(v, u)[0] = uchar(p.b);
+	img.at<Vec3b>(v, u)[1] = uchar(p.g);
+	img.at<Vec3b>(v, u)[2] = uchar(p.r);
 }
 
 double det(double mat[3][3])
