@@ -1080,7 +1080,7 @@ vector<PPC*> make_voxelized_Plen_PC(
 	return voxelized_PPC;
 }
 
-vector<PPC*> make_formulaic_voxelized_Plen_PC(
+vector<PPC*> make_modified_Batch_Plen_PC(
 	vector<Mat> color_imgs,
 	vector<Mat> depth_imgs,
 	int voxel_div_num) {
@@ -1227,23 +1227,12 @@ vector<PPC*> make_formulaic_voxelized_Plen_PC(
 	return ppc_vec;
 }
 
-vector<PPC*> make_formulaic_voxelized_Plen_PC2(
-	vector<Mat> color_imgs,
-	vector<Mat> depth_imgs,
-	int voxel_div_num,
-	vector<float> &Cube_size,
-	vector<float> &cube_size) {
-
-	//vector<PPC*> Plen_PC = make_sequenced_Plen_PC(color_imgs, depth_imgs, 0, camera_order);
-
-	vector<PointCloud<PointXYZRGB>::Ptr> point_clouds = make_all_PC(color_imgs, depth_imgs);
-
-	vector<float> min(3), max(3);
-	//find_min_max(Plen_PC, min, max);
-	find_min_max(point_clouds, min, max);
-
-	/////////////
-	//version = 1.0;
+void extract_largeNunit_CubeSize(
+	vector<float>& min, 
+	vector<float>& max, 
+	int voxel_div_num, 
+	vector<float>& Cube_size, 
+	vector<float>& cube_size) {
 
 	float Cube_x_size = max[0] - min[0];
 	float Cube_y_size = max[1] - min[1];
@@ -1253,32 +1242,23 @@ vector<PPC*> make_formulaic_voxelized_Plen_PC2(
 	float cube_y_size = Cube_y_size / voxel_div_num;
 	float cube_z_size = Cube_z_size / voxel_div_num;
 
-	cout << "Cube_x_size : " << Cube_x_size << "\t\tCube_y_size : " << Cube_y_size << "\t\tCube_z_size : " << Cube_z_size << endl;
-	cout << "cube_x_size : " << cube_x_size << "\t\tcube_y_size : " << cube_y_size << "\t\tcube_z_size : " << cube_z_size << endl;
+	//cout << "Cube_x_size : " << Cube_x_size << "\t\tCube_y_size : " << Cube_y_size << "\t\tCube_z_size : " << Cube_z_size << endl;
+	//cout << "cube_x_size : " << cube_x_size << "\t\tcube_y_size : " << cube_y_size << "\t\tcube_z_size : " << cube_z_size << endl;
 
 	Cube_size = { Cube_x_size, Cube_y_size, Cube_z_size };
 	cube_size = { cube_x_size, cube_y_size, cube_z_size };
+}
+
+set<unsigned long long> find_valid_cube_indices(
+	vector<PointCloud<PointXYZRGB>::Ptr> pointclouds, 
+	int voxel_div_num, 
+	vector<float> min, 
+	vector<float> Cube_size, 
+	vector<float> cube_size) {
 
 	set<unsigned long long> valid_cube_indices;
 	unsigned long long voxel_div_num_ = voxel_div_num;
 
-	//////////incremental PPC///////
-	//cout << "incremental ppc size : " << Plen_PC.size() << endl;
-	//for (int point_idx = 0; point_idx < Plen_PC.size(); point_idx++) {
-
-	//	float* geo = Plen_PC[point_idx]->GetGeometry();
-	//	unsigned long long x_voxel_index = (int)floor((geo[0] - min[0]) / Cube_x_size * ((float)voxel_div_num - 1));
-	//	unsigned long long y_voxel_index = (int)floor((geo[1] - min[1]) / Cube_y_size * ((float)voxel_div_num - 1));
-	//	unsigned long long z_voxel_index = (int)floor((geo[2] - min[2]) / Cube_z_size * ((float)voxel_div_num - 1));
-
-	//	unsigned long long cube_index = x_voxel_index * (voxel_div_num_ * voxel_div_num_) + y_voxel_index * voxel_div_num_ + z_voxel_index;
-	//	valid_cube_indices.insert(cube_index);
-	//}
-	//Plen_PC.clear();
-	////////////////////////////////
-
-
-	////////////////////all PC//////////////////
 	unsigned long long x_voxel_index;
 	unsigned long long y_voxel_index;
 	unsigned long long z_voxel_index;
@@ -1286,74 +1266,82 @@ vector<PPC*> make_formulaic_voxelized_Plen_PC2(
 	int count = 0;
 	PointXYZRGB p;
 
-	for (int pc_idx = 0; pc_idx < point_clouds.size(); pc_idx++) {
-		//cout << "pc_idx : " << pc_idx << endl;
-		count += point_clouds.size();
-		PointCloud<PointXYZRGB>::Ptr pc = point_clouds[pc_idx];
+	for (int pc_idx = 0; pc_idx < pointclouds.size(); pc_idx++) {
+		count += pointclouds.size();
+		PointCloud<PointXYZRGB>::Ptr pc = pointclouds[pc_idx];
 		for (int p_idx = 0; p_idx < pc->points.size(); p_idx++) {
 
 			p = pc->points[p_idx];
-			x_voxel_index = (int)floor((p.x - min[0]) / Cube_x_size * ((float)voxel_div_num - 1));
-			y_voxel_index = (int)floor((p.y - min[1]) / Cube_y_size * ((float)voxel_div_num - 1));
-			z_voxel_index = (int)floor((p.z - min[2]) / Cube_z_size * ((float)voxel_div_num - 1));
+			x_voxel_index = (int)floor((p.x - min[0]) / Cube_size[0] * ((float)voxel_div_num - 1));
+			y_voxel_index = (int)floor((p.y - min[1]) / Cube_size[1] * ((float)voxel_div_num - 1));
+			z_voxel_index = (int)floor((p.z - min[2]) / Cube_size[2] * ((float)voxel_div_num - 1));
 
 			cube_index = x_voxel_index * (voxel_div_num_ * voxel_div_num_) + y_voxel_index * voxel_div_num_ + z_voxel_index;
 			valid_cube_indices.insert(cube_index);
 		}
 	}
-	point_clouds.clear();
-	vector<PointCloud<PointXYZRGB>::Ptr>().swap(point_clouds);
-	/////////////////////////////////////////////
+	
 
 	cout << "valid_cube_indices size : " << valid_cube_indices.size() << endl;
 
-	/////////////////////////////////////////////
-	double depth_threshold = sqrt((cube_x_size * cube_x_size) + (cube_y_size * cube_y_size) + (cube_z_size * cube_z_size));// *0.5;
-	/////////////////////////////////////////////
+	return valid_cube_indices;
+}
 
-	Mat confirm_img(_height, _width, CV_8UC1, Scalar(0));
-	vector<Mat> confirm_imgs(total_num_cameras, confirm_img);
+vector<PPC*> make_modified_Batch_Plen_PC2(
+	vector<Mat> color_imgs,
+	vector<Mat> depth_imgs,
+	int voxel_div_num,
+	vector<float> &Cube_size,
+	vector<float> &cube_size) {
+
+	vector<PointCloud<PointXYZRGB>::Ptr> pointclouds = make_all_PC(color_imgs, depth_imgs);
+
+	vector<float> min(3), max(3);
+	find_min_max(pointclouds, min, max);
+
+	extract_largeNunit_CubeSize(min, max, voxel_div_num, Cube_size, cube_size);
+
+	set<unsigned long long> valid_cube_indices;
+	valid_cube_indices = find_valid_cube_indices(pointclouds, voxel_div_num, min, Cube_size, cube_size);
+
+	pointclouds.clear();
+	vector<PointCloud<PointXYZRGB>::Ptr>().swap(pointclouds);
+
+	/////////////////////////////////////////////
+	double depth_threshold = sqrt((cube_size[0] * cube_size[0]) + (cube_size[1] * cube_size[1]) + (cube_size[2] * cube_size[2]));// *0.5;
+	/////////////////////////////////////////////
 
 	vector<PPC*> ppc_vec;
 
 	set<unsigned long long>::iterator cube_index_iter;
 	int cnt = 0; 
 
+	unsigned long long voxel_div_num_ = voxel_div_num;
 	int x_idx, y_idx, z_idx;
 	float X, Y, Z;
 
 	int u, v;
-
 	double w, dist_point2camera, w_origin, dist_origin;
-	//PointXYZ p2;
 
 	for(cube_index_iter = valid_cube_indices.begin(); cube_index_iter !=valid_cube_indices.end(); cube_index_iter++){
 		if (cnt % 10000000==0) cout << cnt << "th cube is being produced . . " << endl;
 
 		unsigned long long cube_index = *cube_index_iter;
 
-		//(unsigned long long)32767 / (int)1073741824
-		//(unsigned long long)65535 / (int)4294967296
-
 		x_idx = int(cube_index / (voxel_div_num_ * voxel_div_num_));
 		y_idx = int((cube_index % (voxel_div_num_ * voxel_div_num_)) / voxel_div_num);
 		z_idx = int((cube_index % (voxel_div_num_ * voxel_div_num_)) % voxel_div_num);
 
-		X = (float(x_idx) / (voxel_div_num - 1) * Cube_x_size) + min[0] + (cube_x_size / 2);
-		Y = (float(y_idx) / (voxel_div_num - 1) * Cube_y_size) + min[1] + (cube_y_size / 2);
-		Z = (float(z_idx) / (voxel_div_num - 1) * Cube_z_size) + min[2] + (cube_z_size / 2);
+		X = (float(x_idx) / (voxel_div_num - 1) * Cube_size[0]) + min[0] + (cube_size[0] / 2);
+		Y = (float(y_idx) / (voxel_div_num - 1) * Cube_size[1]) + min[1] + (cube_size[1] / 2);
+		Z = (float(z_idx) / (voxel_div_num - 1) * Cube_size[2]) + min[2] + (cube_size[2] / 2);
 
 		//cout << "X :" << X << "\tY : " << Y << "\tZ : " << Z << endl;
 		bool is_first_color = true;
-		PPC* point_ppc;
+		PPC* point_ppc; //빼보자.
 
 		cnt++;
-		double max_dist = 0.;
 		for (int cam = 0; cam < total_num_cameras; cam++) {
-
-			//p2.x = X;
-			//p2.y = Y;
-			//p2.z = Z;
 
 			w = projection_XYZ_2_UV(
 				m_CalibParams[cam].m_ProjMatrix,
@@ -1367,9 +1355,6 @@ vector<PPC*> make_formulaic_voxelized_Plen_PC2(
 			dist_point2camera = find_point_dist(w, cam);
 
 			if ((u < 0) || (v < 0) || (u > _width - 1) || (v > _height - 1)) continue;
-
-			//confirm_img로 색상할당 판별
-			//if (confirm_imgs[cam].at<uchar>(v, u) != uchar(0)) continue;
 
 			//원본거리값 계산
 			double X_origin, Y_origin, Z_origin;
@@ -1392,13 +1377,7 @@ vector<PPC*> make_formulaic_voxelized_Plen_PC2(
 			else Z_origin = MVG(m_CalibParams[cam].m_K, m_CalibParams[cam].m_RotMatrix, m_CalibParams[cam].m_Trans, u, v, Z_origin, &X_origin, &Y_origin);
 
 			w_origin = m_CalibParams[cam].m_ProjMatrix(2, 0) * X_origin + m_CalibParams[cam].m_ProjMatrix(2, 1) * Y_origin + m_CalibParams[cam].m_ProjMatrix(2, 2) * Z_origin + m_CalibParams[cam].m_ProjMatrix(2, 3);
-			//double w_origin = projection_XYZ_2_UV(m_CalibParams[cam].m_ProjMatrix, X_origin, Y_origin, Z_origin, u, v);
 			dist_origin = find_point_dist(w_origin, cam);
-
-
-			// 원본 거리값과 복셀의 중점과의 거리 오차로 색상할당 판별 
-			//if (abs(dist_origin - dist_point2camera) < depth_threshold) {
-				//confirm_imgs[cam].at<uchar>(v, u) = uchar(1);
 
 			if (abs(dist_origin - dist_point2camera) < depth_threshold) {
 				if (is_first_color) {
@@ -1427,8 +1406,6 @@ vector<PPC*> make_formulaic_voxelized_Plen_PC2(
 					point_ppc->SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
 				}
 			}
-			//}
-
 		}
 
 		if (!is_first_color) ppc_vec.push_back(point_ppc);
@@ -1453,7 +1430,6 @@ vector<PointCloud<PointXYZRGB>::Ptr> make_all_PC(
 
 	return pointclouds;
 }
-
 
 void make_proj_img_vec_ppc(
 	vector<PPC*> PPC,
@@ -1523,7 +1499,6 @@ void make_proj_img_vec_ppc2(
 	vector<PPC*> PPC,
 	vector<Mat>& proj_img_vec,
 	vector<Mat>& is_hole_proj_imgs,
-	vector<PointCloud<PointXYZRGB>::Ptr>& pointclouds,
 	int nNeighbor)
 {
 	//하나의 Mat 객체로 Mat vector를 초기화한다면 vector 요소들이 같은 메모리 참조하기 때문에 이를 방지
@@ -1543,15 +1518,17 @@ void make_proj_img_vec_ppc2(
 	float* geo;
 	Vec3b color;
 
-	for (int ppc_i = 0; ppc_i < PPC.size(); ppc_i++) {
-		for (int cam_i = 0; cam_i < total_num_cameras; cam_i++) {
+	int cnt = 0;
+	if (cnt % 10000000 == 0) cout << cnt << "th cube is being projected . . " << endl;
+	for (int cam_i = 0; cam_i < total_num_cameras; cam_i++) {
+		for (int ppc_i = 0; ppc_i < PPC.size(); ppc_i++) {
 			if (!PPC[ppc_i]->CheckOcclusion(cam_i)) {
 				geo = PPC[ppc_i]->GetGeometry();
 
 				p.x = geo[0];
 				p.y = geo[1];
 				p.z = geo[2];
-				
+
 				color = PPC[ppc_i]->GetColor(cam_i);
 
 				p.r = color[0];
@@ -1560,6 +1537,40 @@ void make_proj_img_vec_ppc2(
 
 				projection_bypoint(p, cam_i, proj_img_vec[cam_i], depth_value_imgs[cam_i], is_hole_proj_imgs[cam_i]);
 			}
+		}
+		cnt++;
+	}
+}
+
+void make_proj_img_vec_ppc2_per_viewpoint(
+	vector<PPC*> PPC,
+	int cam_num,
+	Mat& proj_img,
+	Mat& is_hole_proj_img,
+	int nNeighbor)
+{
+	//하나의 Mat 객체로 Mat vector를 초기화한다면 vector 요소들이 같은 메모리 참조하기 때문에 이를 방지
+	Mat depth_value_img(_height, _width, CV_64F, -1);
+
+	PointXYZRGB p;
+	float* geo;
+	Vec3b color;
+
+	for (int ppc_i = 0; ppc_i < PPC.size(); ppc_i++) {
+		if (!PPC[ppc_i]->CheckOcclusion(cam_num)) {
+			geo = PPC[ppc_i]->GetGeometry();
+
+			p.x = geo[0];
+			p.y = geo[1];
+			p.z = geo[2];
+
+			color = PPC[ppc_i]->GetColor(cam_num);
+
+			p.r = color[0];
+			p.g = color[1];
+			p.b = color[2];
+
+			projection_bypoint(p, cam_num, proj_img, depth_value_img, is_hole_proj_img);
 		}
 	}
 }
@@ -1575,10 +1586,33 @@ void projection_PPC_with_hole_filling(
 	int window_size)
 {
 	cout << "projection and hole filling is proceeding... " << endl;
-	make_proj_img_vec_ppc2(Plen_PC, projection_imgs, is_hole_proj_imgs, pointclouds_, nNeighbor);
+	make_proj_img_vec_ppc2(Plen_PC, projection_imgs, is_hole_proj_imgs, nNeighbor);
 	is_hole_filled_imgs = is_hole_proj_imgs;
 	hole_filling_PPC(projection_imgs, filled_imgs, is_hole_filled_imgs, window_size);
 	cout << "projection and hole filling done... " << endl;
+}
+
+void projection_PPC_with_hole_filling_per_viewpoint(
+	vector<PPC*> Plen_PC,
+	int cam_num,
+	Mat& projection_img,
+	Mat& filled_img,
+	Mat& is_hole_proj_img,
+	Mat& is_hole_filled_img,
+	int nNeighbor,
+	int window_size)
+{
+	clock_t t7 = clock();
+	make_proj_img_vec_ppc2_per_viewpoint(Plen_PC, cam_num, projection_img, is_hole_proj_img, nNeighbor);
+	clock_t t8 = clock();
+	cout << "make_proj_img_vec_ppc2_per_viewpoint : " << float(t8 - t7) / CLOCKS_PER_SEC << endl << endl;
+
+	clock_t t9 = clock();
+	is_hole_filled_img = is_hole_proj_img;
+	HoleFilling_per_viewpoint(projection_img, filled_img, is_hole_filled_img, window_size);
+	clock_t t10 = clock();
+	cout << "HoleFilling_per_viewpoint: " << float(t10 - t9) / CLOCKS_PER_SEC << endl << endl;
+
 }
 
 void hole_filling_PPC(
@@ -1591,9 +1625,10 @@ void hole_filling_PPC(
 
 	for (int num = 0; num < total_num_cameras; num++) {
 		//hole_image = find_hole_PPC(proj_imgs[num]); //hole -> 0
-		filled_imgs[num] = make_filled_image_PPC(proj_imgs[num], is_hole_filled_imgs[num], window_size);
+		HoleFilling_per_viewpoint(proj_imgs[num], filled_imgs[num], is_hole_filled_imgs[num], window_size);
 	}
 }
+
 
 Mat find_hole_PPC(Mat projection_img)
 {
@@ -1609,13 +1644,13 @@ Mat find_hole_PPC(Mat projection_img)
 	return hole_image;
 }
 
-Mat make_filled_image_PPC(Mat colorimg, Mat& hole_image, int window_size){
+void HoleFilling_per_viewpoint(Mat colorimg, Mat& filled_image, Mat& hole_image, int window_size){
 	//hole_image 
 	//	0-projection ok
 	//	1-hole
 	//	2-not projection but filled
 
-	Mat filled_image(_height, _width, CV_8UC3, Scalar::all(0));
+	//Mat filled_image(_height, _width, CV_8UC3, Scalar::all(0));
 
 	for (int rownum = 0; rownum < _height; rownum++){
 		for (int colnum = 0; colnum < _width; colnum++){
@@ -1667,7 +1702,7 @@ Mat make_filled_image_PPC(Mat colorimg, Mat& hole_image, int window_size){
 			}
 		}
 	}
-	return filled_image;
+	//return filled_image;
 }
 
 void save_ppc(vector<PPC*> ppc, string filename) {

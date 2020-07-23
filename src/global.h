@@ -25,32 +25,32 @@
 
 #include "stdio.h"
 #include "stdlib.h"
-#include <windows.h>
+//#include <windows.h>
 #include <iostream>
 #include "opencv.hpp"
-#include <pcl/io/io.h>
+//#include <pcl/io/io.h>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/io/eigen.h>
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/visualization/pcl_visualizer.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/console/parse.h>
-#include <pcl/common/transforms.h>
-#include <pcl/ModelCoefficients.h>
-#include <pcl/filters/statistical_outlier_removal.h>
+//#include <pcl/io/pcd_io.h>
+//#include <pcl/console/parse.h>
+//#include <pcl/common/transforms.h>
+//#include <pcl/ModelCoefficients.h>
+//#include <pcl/filters/statistical_outlier_removal.h>
 #include <math.h>
-#include <pcl/io/ply_io.h>
-#include <pcl/io/ascii_io.h>
-#include <pcl/io/vtk_lib_io.h>
-#include <pcl/PCLPointCloud2.h>
-#include <pcl/point_traits.h>
-#include <pcl/common/io.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/io/pcd_io.h>
+//#include <pcl/io/ply_io.h>
+//#include <pcl/io/ascii_io.h>
+//#include <pcl/io/vtk_lib_io.h>
+//#include <pcl/PCLPointCloud2.h>
+//#include <pcl/point_traits.h>
+//#include <pcl/common/io.h>
+//#include <pcl/filters/voxel_grid.h>
+//#include <pcl/io/pcd_io.h>
 #include <list>
 #include <ctime>
-#include <pcl/features/normal_3d.h>
+//#include <pcl/features/normal_3d.h>
 #include <fstream>
 #include <vector>
 #include <algorithm>
@@ -58,7 +58,9 @@
 #include <bitset>
 #include <set>
 #include <tchar.h>
-
+#include <Windows.h>
+#include <psapi.h>
+#include <conio.h>
 
 using namespace pcl;
 using namespace std;
@@ -111,8 +113,6 @@ public:
 	virtual vector<bool> GetOcclusion() { return { false }; }
 	virtual void SetColor(PointXYZRGB point, int idx) {}
 	virtual void SetColor(uchar avrv, uchar avru, vector<uchar> y, vector<bool> occ) {}
-
-	
 
 };
 

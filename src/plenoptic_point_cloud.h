@@ -34,12 +34,26 @@ vector<PPC*> make_voxelized_Plen_PC(
 	vector<float>& Cube_size,
 	vector<float>& cube_size);
 
-vector<PPC*> make_formulaic_voxelized_Plen_PC(
+void extract_largeNunit_CubeSize(
+	vector<float>& min,
+	vector<float>& max,
+	int voxel_div_num,
+	vector<float>& Cube_size,
+	vector<float>& cube_size);
+
+set<unsigned long long> find_valid_cube_indices(
+	vector<PointCloud<PointXYZRGB>::Ptr> pointclouds, 
+	int voxel_div_num, 
+	vector<float> min,
+	vector<float> Cube_size, 
+	vector<float> cube_size);
+
+vector<PPC*> make_modified_Batch_Plen_PC(
 	vector<Mat> color_imgs,
 	vector<Mat> depth_imgs,
 	int voxel_div_num);
 
-vector<PPC*> make_formulaic_voxelized_Plen_PC2(
+vector<PPC*> make_modified_Batch_Plen_PC2(
 	vector<Mat> color_imgs,
 	vector<Mat> depth_imgs,
 	int voxel_div_num,
@@ -61,14 +75,30 @@ void make_proj_img_vec_ppc2(
 	vector<PPC*> PPC,
 	vector<Mat>& proj_img_vec,
 	vector<Mat>& is_hole_proj_imgs,
-	vector<PointCloud<PointXYZRGB>::Ptr>& pointclouds,
+	int nNeighbor);
+
+void make_proj_img_vec_ppc2_per_viewpoint(
+	vector<PPC*> PPC,
+	int cam_num,
+	Mat& proj_img,
+	Mat& is_hole_proj_img,
 	int nNeighbor);
 
 void projection_PPC_with_hole_filling(vector<PPC*> Plen_PC, vector<Mat> &projection_imgs, vector<Mat> &filled_imgs, vector<Mat>& is_hole_proj_imgs,
 	vector<Mat>& is_hole_filled_imgs, vector<PointCloud<PointXYZRGB>::Ptr> &pointclouds_,int nNeighbor, int window_size);
 
+void projection_PPC_with_hole_filling_per_viewpoint(
+	vector<PPC*> Plen_PC,
+	int cam_num,
+	Mat& projection_img,
+	Mat& filled_img,
+	Mat& is_hole_proj_img,
+	Mat& is_hole_filled_img,
+	int nNeighbor,
+	int window_size);
+
 void hole_filling_PPC(vector<Mat> proj_imgs, vector<Mat> &filled_imgs, vector<Mat>& is_hole_filled_imgs, int window_size);
 Mat find_hole_PPC(Mat projection_img);
-Mat make_filled_image_PPC(Mat colorimg, Mat &hole_image, int window_size);
+void HoleFilling_per_viewpoint(Mat colorimg, Mat& filled_image, Mat& hole_image, int window_size);
 void save_ppc(vector<PPC*> ppc, string filename);
 vector<PPC*> load_ppc(string filename);

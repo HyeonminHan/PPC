@@ -2,7 +2,7 @@
 
 #include "global.h"
 
-vector<int> make_camOrder(int refView);
+vector<int> make_camOrder(int refView, map<int, int>& LookUpTable);
 double depth_level_2_Z(unsigned char d);
 double depth_level_2_Z_s(unsigned short d);
 double depth_level_2_Z_s(unsigned short d, int camera);
@@ -62,15 +62,38 @@ void projection(PointCloud<PointXYZRGB>::Ptr pointcloud, int camera, Mat &img, M
 void projection_bypoint(PointXYZRGB p, int camera, Mat& img, Mat& dist_img, Mat& is_hole_img);
 double det(double mat[3][3]);
 void printPSNRWithBlackPixel_RGB(Mat orig_img, Mat proj_img);
-void printPSNRWithBlackPixel_RGB(vector<Mat> orig_imgs, vector<Mat> proj_imgs, vector<Mat>is_hole_filled_imgs, vector<float>& psnrs_b,vector<float>& psnrs_g,vector<float>& psnrs_r, vector<int>& num_holes);
-void printPSNRWithBlackPixel(vector<Mat> orig_imgs, vector<Mat> proj_imgs, vector<float> &psnrs_y, vector<float>& psnrs_u, vector<float>& psnrs_v);
+void printPSNRWithBlackPixel_RGB(vector<Mat> orig_imgs, vector<Mat> proj_imgs, vector<Mat>is_hole_filled_imgs, vector<float>& psnrs_b, vector<float>& psnrs_g, vector<float>& psnrs_r, vector<int>& num_holes);
+void calcPSNRWithBlackPixel_RGB_per_viewpoint(
+	int cam_num,
+	Mat orig_img,
+	Mat proj_img,
+	Mat is_hole_filled_img,
+	vector<float>& psnrs_b,
+	vector<float>& psnrs_g,
+	vector<float>& psnrs_r,
+	vector<int>& num_holes);
+void printPSNRWithBlackPixel(vector<Mat> orig_imgs, vector<Mat> proj_imgs, vector<float>& psnrs_y, vector<float>& psnrs_u, vector<float>& psnrs_v);
 void printPSNRWithoutBlackPixel_RGB(Mat orig_img, Mat proj_img);
-void printPSNRWithoutBlackPixel_RGB(vector<Mat> orig_imgs, vector<Mat> proj_imgs, vector<Mat>is_hole_proj_imgs, vector<float>& psnrs_b,vector<float>& psnrs_g,vector<float>& psnrs_r, vector<int>& num_holes);
-void printPSNRWithoutBlackPixel(vector<Mat> orig_imgs, vector<Mat> proj_imgs, vector<float>& psnrs_y, vector<float>& psnrs_u, vector<float>& psnrs_v, vector<int> &num_holes);
+void printPSNRWithoutBlackPixel_RGB(vector<Mat> orig_imgs, vector<Mat> proj_imgs, vector<Mat>is_hole_proj_imgs, vector<float>& psnrs_b, vector<float>& psnrs_g, vector<float>& psnrs_r, vector<int>& num_holes);
+void calcPSNRWithoutBlackPixel_RGB_per_viewpoint(
+	int cam_num,
+	Mat orig_img,
+	Mat proj_img,
+	Mat is_hole_proj_img,
+	vector<float>& psnrs_b,
+	vector<float>& psnrs_g,
+	vector<float>& psnrs_r,
+	vector<int>& num_holes);
+void printPSNR(
+	vector<float> psnrs_b,
+	vector<float> psnrs_g,
+	vector<float> psnrs_r,
+	vector<int>& num_holes);
+void printPSNRWithoutBlackPixel(vector<Mat> orig_imgs, vector<Mat> proj_imgs, vector<float>& psnrs_y, vector<float>& psnrs_u, vector<float>& psnrs_v, vector<int>& num_holes);
 void printPSNRWithBlackPixel(
 	vector<Mat> orig_imgs,
 	vector<Mat> proj_imgs,
-	vector<float> &psnrs_y,
+	vector<float>& psnrs_y,
 	vector<float>& psnrs_u,
 	vector<float>& psnrs_v);
 void printPSNRWithoutBlackPixel(

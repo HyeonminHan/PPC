@@ -1,7 +1,7 @@
 #include "common.h"
 #define _CRT_SECURE_NO_WARNINGS
 
-vector<int> make_camOrder(int refView) {
+vector<int> make_camOrder(int refView, map<int, int> &LookUpTable) {
 	vector<int> camera_order;
 	if (refView == 220 && data_mode >= 4) {
 		int temp = 0;
@@ -13,11 +13,21 @@ vector<int> make_camOrder(int refView) {
 			camera_order.push_back(refView - temp);
 			camera_order.push_back(refView + temp);
 		}
+
+		for (int i = 0; i < total_num_cameras; i++) {
+			LookUpTable.insert(make_pair(camera_order[i], i));
+		}
+
+		int cnt = 0;
+		for (map<int, int>::iterator it = LookUpTable.begin(); it != LookUpTable.end(); it++) {
+			it->second = cnt++;
+		}
 	}
 	else {
 		for (int i = 0; i < total_num_cameras; i++)
 			camera_order.push_back(i);
 	}
+
 	return camera_order;
 }
 
@@ -718,12 +728,13 @@ void get_color_and_depth_imgs(
 	vector<Mat> imgs;
 	vector<Mat> imgs2;
 
+	string folder_path;
 	if (camera_order[0] == 0) {
 		for (int camera = 0; camera < total_num_cameras; camera++)
 		{
 			//int camera = camera_order[i];
 
-			string folder_path = path + "/cam" + to_string(camera) + "/";
+			folder_path = path + "/cam" + to_string(camera) + "/";
 			Mat color_img, depth_img;
 
 			if (data_mode == MSR3DVideo_Ballet) {
@@ -739,10 +750,10 @@ void get_color_and_depth_imgs(
 			//imgs[camera] = color_img;
 			//imgs2[camera] = depth_img;
 
+			cvtColor(color_img, color_img, CV_BGR2YUV);
 			imgs.push_back(color_img);
 			imgs2.push_back(depth_img);
 
-			cvtColor(color_img, color_img, CV_BGR2YUV);
 		}
 	}
 	else {
@@ -750,7 +761,7 @@ void get_color_and_depth_imgs(
 		{
 			int camera = camera_order[i];
 
-			string folder_path = path + "/cam" + to_string(camera) + "/";
+			folder_path = path + "/cam" + to_string(camera) + "/";
 			Mat color_img, depth_img;
 
 			if (data_mode == MSR3DVideo_Ballet) {
@@ -763,18 +774,19 @@ void get_color_and_depth_imgs(
 				depth_img = imread(path + "/RGB/dep/" + depth_names[camera][frame], IMREAD_ANYDEPTH);
 			}
 
-			//imgs[camera] = color_img;
-			//imgs2[camera] = depth_img;
+			cvtColor(color_img, color_img, CV_BGR2YUV);
 			imgs.push_back(color_img);
 			imgs2.push_back(depth_img);
-
-			cvtColor(color_img, color_img, CV_BGR2YUV);
-
 		}
 	}
-
+	
 	color_imgs = imgs;
 	depth_imgs = imgs2;
+
+	cout << imgs.capacity() << endl;
+	cout << imgs2.capacity() << endl;
+	cout << color_imgs.capacity() << endl;
+	cout << depth_imgs.capacity() << endl;
 }
 
 void get_color_and_depth_imgs(
@@ -1106,8 +1118,6 @@ void projection_bypoint(PointXYZRGB p, int camera, Mat& img, Mat& dist_img, Mat&
 	double Y = p.y;
 	double Z = p.z;
 
-	//Z = -Z;
-
 	w = projection_XYZ_2_UV(
 		m_CalibParams[camera].m_ProjMatrix,
 		X,
@@ -1310,6 +1320,74 @@ void printPSNRWithBlackPixel_RGB(
 	avgNumofPixel_r /= total_num_cameras;
 }
 
+void calcPSNRWithBlackPixel_RGB_per_viewpoint(
+	int cam_num,
+	Mat orig_img,
+	Mat proj_img,
+	Mat is_hole_filled_img,
+	vector<float>& psnrs_b,
+	vector<float>& psnrs_g,
+	vector<float>& psnrs_r,
+	vector<int>& num_holes)
+{
+	//////////////////////////
+
+	float mse_b = 0, psnr_b = 0, tmp_b = 0;
+	float mse_g = 0, psnr_g = 0, tmp_g = 0;
+	float mse_r = 0, psnr_r = 0, tmp_r = 0;
+
+	float sum_b = 0, sum_g = 0, sum_r = 0;
+	int cnt_b = 0, cnt_g = 0, cnt_r = 0;
+
+	Mat bgr_orig[3];
+	Mat bgr_proj[3];
+
+	Mat orig_ = orig_img.clone();
+	Mat proj_ = proj_img.clone();
+
+	cvtColor(orig_, orig_, COLOR_YUV2BGR);
+	cvtColor(proj_, proj_, COLOR_YUV2BGR);
+
+	split(orig_, bgr_orig);
+	split(proj_, bgr_proj);
+
+	int n = 0;
+
+	for (int v = 0; v < _height; v++)
+		for (int u = 0; u < _width; u++) {
+
+			if (is_hole_filled_img.at<uchar>(v, u) == 1)
+				//if (bgr_proj[0].at<uchar>(v, u) == 0 && bgr_proj[1].at<uchar>(v, u) == 0 && bgr_proj[2].at<uchar>(v, u) == 0) {
+				n++;
+
+			tmp_b = bgr_orig[0].at<uchar>(v, u) - bgr_proj[0].at<uchar>(v, u);
+			cnt_b++;
+			sum_b += tmp_b * tmp_b;
+
+			tmp_g = bgr_orig[1].at<uchar>(v, u) - bgr_proj[1].at<uchar>(v, u);
+			cnt_g++;
+			sum_g += tmp_g * tmp_g;
+
+			tmp_r = bgr_orig[2].at<uchar>(v, u) - bgr_proj[2].at<uchar>(v, u);
+			cnt_r++;
+			sum_r += tmp_r * tmp_r;
+		}
+
+	mse_b = sum_b / cnt_b;
+	psnr_b = 10 * log10(255 * 255 / mse_b);
+
+	mse_g = sum_g / cnt_g;
+	psnr_g = 10 * log10(255 * 255 / mse_g);
+
+	mse_r = sum_r / cnt_r;
+	psnr_r = 10 * log10(255 * 255 / mse_r);
+
+	num_holes.push_back(n);
+	psnrs_b.push_back(psnr_b);
+	psnrs_g.push_back(psnr_g);
+	psnrs_r.push_back(psnr_r);
+}
+
 // BGR to Gray
 void printPSNRWithoutBlackPixel_RGB(
 	Mat orig_img,
@@ -1473,6 +1551,113 @@ void printPSNRWithoutBlackPixel_RGB(
 	avgPSNR_r /= total_num_cameras;
 	avgNumofPixel_r /= total_num_cameras;
 }
+
+void calcPSNRWithoutBlackPixel_RGB_per_viewpoint(
+	int cam_num,
+	Mat orig_img,
+	Mat proj_img,
+	Mat is_hole_proj_img,
+	vector<float>& psnrs_b,
+	vector<float>& psnrs_g,
+	vector<float>& psnrs_r,
+	vector<int>& num_holes)
+{
+
+	float mse_b = 0, psnr_b = 0, tmp_b = 0;
+	float mse_g = 0, psnr_g = 0, tmp_g = 0;
+	float mse_r = 0, psnr_r = 0, tmp_r = 0;
+
+	float sum_b = 0, sum_g = 0, sum_r = 0;
+	int cnt_b = 0, cnt_g = 0, cnt_r = 0;
+
+	Mat bgr_orig[3];
+	Mat bgr_proj[3];
+
+	//Mat orig_ = orig_imgs[cam_num];
+	//Mat proj_ = proj_imgs[cam_num];
+
+	Mat orig_ = orig_img.clone();
+	Mat proj_ = proj_img.clone();
+
+	cvtColor(orig_, orig_, COLOR_YUV2BGR);
+	cvtColor(proj_, proj_, COLOR_YUV2BGR);
+
+	split(orig_, bgr_orig);
+	split(proj_, bgr_proj);
+
+	int n = 0;
+
+	for (int v = 0; v < _height; v++)
+		for (int u = 0; u < _width; u++) {
+
+			if (is_hole_proj_img.at<bool>(v, u))
+				//if (bgr_proj[0].at<uchar>(v, u) == 0 && bgr_proj[1].at<uchar>(v, u) == 0 && bgr_proj[2].at<uchar>(v, u) == 0) {
+				n++;
+
+			else {
+				tmp_b = bgr_orig[0].at<uchar>(v, u) - bgr_proj[0].at<uchar>(v, u);
+				cnt_b++;
+				sum_b += tmp_b * tmp_b;
+
+				tmp_g = bgr_orig[1].at<uchar>(v, u) - bgr_proj[1].at<uchar>(v, u);
+				cnt_g++;
+				sum_g += tmp_g * tmp_g;
+
+				tmp_r = bgr_orig[2].at<uchar>(v, u) - bgr_proj[2].at<uchar>(v, u);
+				cnt_r++;
+				sum_r += tmp_r * tmp_r;
+
+			}
+		}
+
+	mse_b = sum_b / cnt_b;
+	psnr_b = 10 * log10(255 * 255 / mse_b);
+
+	mse_g = sum_g / cnt_g;
+	psnr_g = 10 * log10(255 * 255 / mse_g);
+
+	mse_r = sum_r / cnt_r;
+	psnr_r = 10 * log10(255 * 255 / mse_r);
+
+	num_holes.push_back(n);
+	psnrs_b.push_back(psnr_b);
+	psnrs_g.push_back(psnr_g);
+	psnrs_r.push_back(psnr_r);
+
+}
+
+void printPSNR(
+	vector<float> psnrs_b,
+	vector<float> psnrs_g,
+	vector<float> psnrs_r,
+	vector<int>& num_holes) {
+
+
+	cout << "num of holes ::::::::::::::::" << endl;
+
+	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++) {
+		cout << "cam" << cam_num << " : " << num_holes[cam_num] << endl;
+	}
+
+	cout << "PSNR with black pixel ::::::::::::::::::" << endl;
+
+	cout << "B channel :::::::::::::::" << endl;
+	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++) {
+		cout << "cam" << cam_num << " : " << psnrs_b[cam_num] << endl;
+	}
+
+	cout << "G channel :::::::::::::::" << endl;
+	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++) {
+		cout << "cam" << cam_num << " : " << psnrs_g[cam_num] << endl;
+	}
+
+	cout << "R channel :::::::::::::::" << endl;
+	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++) {
+		cout << "cam" << cam_num << " : " << psnrs_r[cam_num] << endl;
+	}
+
+}
+
 
 // YUV 채널별
 void printPSNRWithBlackPixel(
@@ -2800,13 +2985,20 @@ void YUV_dev(vector<PPC*> PPC, vector<vector<float>>& dev_pointnum_percent, vect
 void YUV_dev2(vector<PPC*> PPC, vector<vector<float>>& dev_pointnum, vector<int>& point_num_per_color, vector<int>& full_color_dev)
 {
 	cout << "YUV_dev2 method is proceeding ..." << endl;
+	float avr_y = 0, avr_u = 0, avr_v = 0;
+	float avr_y_2 = 0, avr_u_2 = 0, avr_v_2 = 0;
+	int cam_number = 0;
+	Mat yuv(1, 1, CV_8UC3);
+	float dev_y = 0, dev_u = 0, dev_v = 0;
+	float avr_dev;
+	
 	int zero_num = 0;
 	for (int point_num = 0; point_num < PPC.size(); point_num++) {
-		float avr_y = 0, avr_u = 0, avr_v = 0;
-		float avr_y_2 = 0, avr_u_2 = 0, avr_v_2 = 0;
-		int cam_number = 0;
+		avr_y = 0, avr_u = 0, avr_v = 0;
+		avr_y_2 = 0, avr_u_2 = 0, avr_v_2 = 0;
+		cam_number = 0;
 		for (int cam = 0; cam < total_num_cameras; cam++) {
-			Mat yuv(1, 1, CV_8UC3);
+			
 
 			if (!PPC[point_num]->CheckOcclusion(cam)) {
 				yuv.at<Vec3b>(0, 0) = PPC[point_num]->GetColor(cam);
@@ -2834,7 +3026,7 @@ void YUV_dev2(vector<PPC*> PPC, vector<vector<float>>& dev_pointnum, vector<int>
 		avr_v_2 /= cam_number;
 
 
-		float dev_y = 0, dev_u = 0, dev_v = 0;
+		dev_y = 0, dev_u = 0, dev_v = 0;
 
 		dev_y = sqrt(avr_y_2 - avr_y * avr_y);
 		dev_u = sqrt(avr_u_2 - avr_u * avr_u);
@@ -2867,7 +3059,7 @@ void YUV_dev2(vector<PPC*> PPC, vector<vector<float>>& dev_pointnum, vector<int>
 
 		}
 
-		float avr_dev = (dev_y + dev_u + dev_v) / 3.0;
+		avr_dev = (dev_y + dev_u + dev_v) / 3.0;
 
 	
 		dev_pointnum[cam_number - 1][0] += avr_dev;
@@ -2881,6 +3073,8 @@ void YUV_dev2(vector<PPC*> PPC, vector<vector<float>>& dev_pointnum, vector<int>
 			if (point_num_per_color[cam] != 0) dev_pointnum[cam][i] = dev_pointnum[cam][i] / (float)point_num_per_color[cam];
 		}
 	}
+
+
 	cout << "YUV_dev2 method is done ..." << endl;
 }
 
