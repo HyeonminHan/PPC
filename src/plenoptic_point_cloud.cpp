@@ -1549,12 +1549,26 @@ void make_proj_img_vec_ppc2_per_viewpoint(
 	Mat& is_hole_proj_img,
 	int nNeighbor)
 {
+
 	//하나의 Mat 객체로 Mat vector를 초기화한다면 vector 요소들이 같은 메모리 참조하기 때문에 이를 방지
 	Mat depth_value_img(_height, _width, CV_64F, -1);
 
 	PointXYZRGB p;
 	float* geo;
 	Vec3b color;
+
+	int u;
+	int v;
+
+	double dist;
+	double w;
+
+	double X;
+	double Y;
+	double Z;
+
+	//double* depth_img_data = depth_value_img.data;
+
 
 	for (int ppc_i = 0; ppc_i < PPC.size(); ppc_i++) {
 		if (!PPC[ppc_i]->CheckOcclusion(cam_num)) {
@@ -1570,7 +1584,39 @@ void make_proj_img_vec_ppc2_per_viewpoint(
 			p.g = color[1];
 			p.b = color[2];
 
-			projection_bypoint(p, cam_num, proj_img, depth_value_img, is_hole_proj_img);
+			X = p.x;
+			Y = p.y;
+			Z = p.z;
+
+			w = projection_XYZ_2_UV(
+				m_CalibParams[cam_num].m_ProjMatrix,
+				X,
+				Y,
+				Z,
+				u,
+				v);
+
+			dist = find_point_dist(w, cam_num);
+
+			if ((u < 0) || (v < 0) || (u > _width - 1) || (v > _height - 1)) return;
+
+			if (depth_value_img.at<double>(v, u) == -1) {
+				//depth_img_data[_width * v + u] = dist;
+				depth_value_img.at<double>(v, u) = dist;
+				is_hole_proj_img.at<uchar>(v, u) = 0;
+			}
+			else
+			{
+				if (dist < depth_value_img.at<double>(v, u))
+					depth_value_img.at<double>(v, u) = dist;
+
+				else return;
+			}
+
+			proj_img.at<Vec3b>(v, u)[0] = uchar(p.b);
+			proj_img.at<Vec3b>(v, u)[1] = uchar(p.g);
+			proj_img.at<Vec3b>(v, u)[2] = uchar(p.r);
+
 		}
 	}
 }
