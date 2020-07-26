@@ -9,6 +9,8 @@ extern string path;
 extern vector<CalibStruct> m_CalibParams;
 extern double version;
 extern vector<int> camera_order;
+extern PPC_v1* ppc_global;
+extern int ppc_size;
 
 vector<PPC*> make_incremental_Plen_PC(
 	vector<Mat> color_imgs,
@@ -60,6 +62,13 @@ vector<PPC*> make_modified_Batch_Plen_PC2(
 	vector<float>& Cube_size,
 	vector<float>& cube_size);
 
+void make_modified_Batch_Plen_PC2_global(
+	vector<Mat> color_imgs,
+	vector<Mat> depth_imgs,
+	int voxel_div_num,
+	vector<float>& Cube_size,
+	vector<float>& cube_size);
+
 vector<PointCloud<PointXYZRGB>::Ptr> make_all_PC(
 	vector<Mat> color_imgs,
 	vector<Mat> depth_imgs);
@@ -84,11 +93,26 @@ void make_proj_img_vec_ppc2_per_viewpoint(
 	Mat& is_hole_proj_img,
 	int nNeighbor);
 
+void make_proj_img_vec_ppc2_per_viewpoint_global(
+	int cam_num,
+	Mat& proj_img,
+	Mat& is_hole_proj_img,
+	int nNeighbor);
+
 void projection_PPC_with_hole_filling(vector<PPC*> Plen_PC, vector<Mat> &projection_imgs, vector<Mat> &filled_imgs, vector<Mat>& is_hole_proj_imgs,
 	vector<Mat>& is_hole_filled_imgs, vector<PointCloud<PointXYZRGB>::Ptr> &pointclouds_,int nNeighbor, int window_size);
 
 void projection_PPC_with_hole_filling_per_viewpoint(
 	vector<PPC*> Plen_PC,
+	int cam_num,
+	Mat& projection_img,
+	Mat& filled_img,
+	Mat& is_hole_proj_img,
+	Mat& is_hole_filled_img,
+	int nNeighbor,
+	int window_size);
+
+void projection_PPC_with_hole_filling_per_viewpoint_global(
 	int cam_num,
 	Mat& projection_img,
 	Mat& filled_img,

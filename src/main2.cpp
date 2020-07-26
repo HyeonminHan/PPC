@@ -12,6 +12,9 @@ vector<CalibStruct> m_CalibParams;
 double version;
 vector<int> camera_order;
 int proj_mode = 0; //0-projection , 1-backprojection
+PPC_v1* ppc_global;
+int ppc_size;
+
 
 int main()
 {
@@ -66,7 +69,7 @@ int main()
 #endif
 
 #ifdef TEST
-	vector<int> datas = { 10 };
+	vector<int> datas = { 11 };
 	for (int data_i = 0; data_i < datas.size(); data_i++) {
 		data_mode = datas[data_i];
 #endif
@@ -255,8 +258,7 @@ int main()
 					else get_color_and_depth_imgs(frame, color_names_, depth_names_, color_imgs, depth_imgs);
 
 					GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-					printf("Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
-
+					printf("get_color_and_depth_imgs Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
 
 					cout << "get_color_and_depth_imgs done... " << endl << endl;
 
@@ -296,10 +298,11 @@ int main()
 						GetProcessMemoryInfo(GetCurrentProcess(),
 							(PROCESS_MEMORY_COUNTERS*)&g_mc, sizeof(g_mc));
 
-						Plen_PC = make_modified_Batch_Plen_PC2(color_imgs, depth_imgs, voxel_div_num, Cube_size, cube_size);
+						//Plen_PC = make_modified_Batch_Plen_PC2(color_imgs, depth_imgs, voxel_div_num, Cube_size, cube_size);
+						make_modified_Batch_Plen_PC2_global(color_imgs, depth_imgs, voxel_div_num, Cube_size, cube_size);
 
 						GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-						printf("Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
+						printf("make_modified_Batch_Plen_PC2 Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
 
 #ifdef TEST			
 						fout_data << Plen_PC.size() << "," << 100 - ((float)Plen_PC.size() / (_width * _height * total_num_cameras) * 100) << "%," <<
@@ -315,49 +318,49 @@ int main()
 
 #ifdef TEST
 					//YUVdev 계산
-					vector<vector<float>> dev_pointnum(total_num_cameras, vector<float>(4, 0));
-					vector<int> point_num_per_color(total_num_cameras, 0);
-					vector<int> full_color_dev(20, 0);
+					//vector<vector<float>> dev_pointnum(total_num_cameras, vector<float>(4, 0));
+					//vector<int> point_num_per_color(total_num_cameras, 0);
+					//vector<int> full_color_dev(20, 0);
 
-					//YUV_dev(Plen_PC, dev_pointnum, point_num_per_color);
-					YUV_dev2(Plen_PC, dev_pointnum, point_num_per_color, full_color_dev);
+					////YUV_dev(Plen_PC, dev_pointnum, point_num_per_color);
+					//YUV_dev2(Plen_PC, dev_pointnum, point_num_per_color, full_color_dev);
 
-					fout_dev << "pointNum" << "\n";
-					for (int i = 0; i < total_num_cameras; i++)
-						fout_dev << "color" << i + 1 << "," << point_num_per_color[i] << "\n";
-					fout_dev << "\n";
-					
-					fout_dev << "Y dev" << "\n";
-					for (int i = 0; i < total_num_cameras; i++)
-						fout_dev << "color" << i + 1 << "," << dev_pointnum[i][1] << "\n";
-					fout_dev << "\n";
+					//fout_dev << "pointNum" << "\n";
+					//for (int i = 0; i < total_num_cameras; i++)
+					//	fout_dev << "color" << i + 1 << "," << point_num_per_color[i] << "\n";
+					//fout_dev << "\n";
+					//
+					//fout_dev << "Y dev" << "\n";
+					//for (int i = 0; i < total_num_cameras; i++)
+					//	fout_dev << "color" << i + 1 << "," << dev_pointnum[i][1] << "\n";
+					//fout_dev << "\n";
 
-					fout_dev << "U dev" << "\n";
-					for (int i = 0; i < total_num_cameras; i++)
-						fout_dev << "color" << i + 1 << "," << dev_pointnum[i][2] << "\n";
-					fout_dev << "\n";
+					//fout_dev << "U dev" << "\n";
+					//for (int i = 0; i < total_num_cameras; i++)
+					//	fout_dev << "color" << i + 1 << "," << dev_pointnum[i][2] << "\n";
+					//fout_dev << "\n";
 
-					fout_dev << "V dev" << "\n";
-					for (int i = 0; i < total_num_cameras; i++)
-						fout_dev << "color" << i + 1 << "," << dev_pointnum[i][3] << "\n";
-					fout_dev << "\n";
+					//fout_dev << "V dev" << "\n";
+					//for (int i = 0; i < total_num_cameras; i++)
+					//	fout_dev << "color" << i + 1 << "," << dev_pointnum[i][3] << "\n";
+					//fout_dev << "\n";
 
-					fout_dev << "# point per color dev of full color " << "\n";
-					for (int i = 0; i < full_color_dev.size(); i++)
-						fout_dev << i*5 <<"-"<<(i+1)*5 << "," << full_color_dev[i]<< "\n";
-					fout_dev << "\n";
+					//fout_dev << "# point per color dev of full color " << "\n";
+					//for (int i = 0; i < full_color_dev.size(); i++)
+					//	fout_dev << i*5 <<"-"<<(i+1)*5 << "," << full_color_dev[i]<< "\n";
+					//fout_dev << "\n";
 
-					for (int i = 0; i < dev_pointnum.size(); i++) {
-						dev_pointnum[i].clear();
-						vector<float>().swap(dev_pointnum[i]);
-					}
-					dev_pointnum.clear();
-					point_num_per_color.clear();
-					full_color_dev.clear();
+					//for (int i = 0; i < dev_pointnum.size(); i++) {
+					//	dev_pointnum[i].clear();
+					//	vector<float>().swap(dev_pointnum[i]);
+					//}
+					//dev_pointnum.clear();
+					//point_num_per_color.clear();
+					//full_color_dev.clear();
 
-					vector<vector<float>>().swap(dev_pointnum);
-					vector<int>().swap(point_num_per_color);
-					vector<int>().swap(full_color_dev);
+					//vector<vector<float>>().swap(dev_pointnum);
+					//vector<int>().swap(point_num_per_color);
+					//vector<int>().swap(full_color_dev);
 
 #endif
 					{
@@ -397,7 +400,7 @@ int main()
 					CreateDirectory(foler_name, NULL);
 
 					Mat projection_img(_height, _width, CV_8UC3, Scalar::all(0));
-					Mat filled_img(_height, _width, CV_8UC3, Scalar::all(0)); 
+					Mat filled_img(_height, _width, CV_8UC3, Scalar::all(0));
 					Mat is_hole_proj_img(_height, _width, CV_8U, Scalar::all(1));
 					Mat is_hole_filled_img(_height, _width, CV_8U, Scalar::all(1));
 
@@ -407,11 +410,6 @@ int main()
 						cout << "===============================" << endl;
 						cout << "          proj_mode : " << proj_mode << endl;
 						cout << "===============================" << endl;
-						Mat is_hole_temp(_height, _width, CV_8U, Scalar::all(1));
-						//vector<Mat> projection_imgs(total_num_cameras, temp_8);
-						//vector<Mat> filled_imgs(total_num_cameras, temp_8);
-						//vector<Mat> is_hole_proj_imgs(total_num_cameras, is_hole_temp);
-						//vector<Mat> is_hole_filled_imgs(total_num_cameras, is_hole_temp);
 
 						clock_t t7 = clock();
 						for (int cam = 0; cam < total_num_cameras; cam++) {
@@ -426,29 +424,27 @@ int main()
 
 							//execute projection of ppc to each view
 							//vector<int> pointNum_Of_colorN(total_num_cameras, 0);
-							projection_PPC_with_hole_filling_per_viewpoint(Plen_PC, cam, projection_img, filled_img, is_hole_proj_img, is_hole_filled_img, nNeighbor, window_size);
+							projection_PPC_with_hole_filling_per_viewpoint_global(cam, projection_img, filled_img, is_hole_proj_img, is_hole_filled_img, nNeighbor, window_size);
 
-							//cout << "point size : " << pointclouds_[0]->points.size() << endl;
 							clock_t t11 = clock();
 							calcPSNRWithoutBlackPixel_RGB_per_viewpoint(cam, color_imgs[cam], projection_img, is_hole_proj_img, psnrs_p_1, psnrs_p_2, psnrs_p_3, num_holes_p);
 							calcPSNRWithBlackPixel_RGB_per_viewpoint(cam, color_imgs[cam], filled_img, is_hole_filled_img, psnrs_h_1, psnrs_h_2, psnrs_h_3, num_holes_h);
 							clock_t t12 = clock();
 							cout << "calcPSNR: " << float(t12 - t11) / CLOCKS_PER_SEC << endl << endl;
-							//if (cam % 10 == 0) {
+							
 							clock_t t13 = clock();
 							Mat proj_viewImg, filled_viewImg;
-
+							
 							cvtColor(projection_img, proj_viewImg, CV_YUV2BGR);
 							imwrite("output\\image\\" + name_mode + "\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + to_string(voxel_div_num) + "_projmode" + to_string(proj_mode) + "_view" + to_string(camera_order_LookUpTable.find(camera_order[cam])->second) + "_proj.png", proj_viewImg);
-
+							
 							cvtColor(filled_img, filled_viewImg, CV_YUV2BGR);
 							imwrite("output\\image\\" + name_mode + "\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + to_string(voxel_div_num) + "_projmode" + to_string(proj_mode) + "_view" + to_string(camera_order_LookUpTable.find(camera_order[cam])->second) + "_filled.png", filled_viewImg);
-
+							
 							proj_viewImg.release();
 							filled_viewImg.release();
 							clock_t t14 = clock();
 							cout << "save image: " << float(t14 - t13) / CLOCKS_PER_SEC << endl << endl;
-							//}
 							/*for (int i = 0; i < filled_imgs.size(); i++) {
 								imshow("filled_img", filled_imgs[i]);
 
@@ -466,13 +462,14 @@ int main()
 						clock_t t8 = clock();
 						cout << "projection and hole filling time: " << float(t8 - t7) / CLOCKS_PER_SEC << endl << endl;
 
+						GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
+						printf("projection Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
+						
 						cout << "< PSNR without black hole >" << endl;
 						printPSNR(psnrs_p_1, psnrs_p_2, psnrs_p_3, num_holes_p);
 						cout << endl << "< PSNR with black hole >" << endl;
 						printPSNR(psnrs_h_1, psnrs_h_2, psnrs_h_3, num_holes_h);
 
-						GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-						printf("Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
 
 #ifdef TEST
 						
@@ -498,31 +495,6 @@ int main()
 
 						Mat proj_viewImg, filled_viewImg;
 						int count_it = 0;
-
-						//string folder_name_string = "output\\image\\" + name_mode;
-						//const char* foler_name = folder_name_string.c_str();// +name_mode;
-
-						//CreateDirectory(foler_name, NULL);
-
-						//for (map<int, Mat>::iterator it = proj_imgs_map.begin(); it != proj_imgs_map.end(); it++) {
-						//	cvtColor(it->second, proj_viewImg, CV_YUV2BGR);
-						//	imwrite("output\\image\\" + name_mode + "\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + to_string(voxel_div_num) + "_projmode" + to_string(proj_mode) + "_view" + to_string(count_it++) + "_proj.png", proj_viewImg);
-						//}
-						//count_it = 0;
-						//for (map<int, Mat>::iterator it = filled_imgs_map.begin(); it != filled_imgs_map.end(); it++) {
-						//	cvtColor(it->second, filled_viewImg, CV_YUV2BGR);
-						//	imwrite("output\\image\\" + name_mode + "\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + to_string(voxel_div_num) + "_projmode" + to_string(proj_mode) + "_view" + to_string(count_it++) + "_filled.png", filled_viewImg);
-						//}
-
-						//for (map<int, Mat>::iterator it = filled_imgs_map.begin(); it != filled_imgs_map.end(); it++) {
-						//	imshow("filled_img", it->second);
-
-						//	Mat viewImg;
-						//	cvtColor(it->second, viewImg, CV_YUV2BGR);
-
-						//	imshow("viewImg", viewImg);
-						//	waitKey(0);
-						//}
 
 						fout_data << "hole_num\n";
 						count_it = 0;

@@ -782,11 +782,6 @@ void get_color_and_depth_imgs(
 	
 	color_imgs = imgs;
 	depth_imgs = imgs2;
-
-	cout << imgs.capacity() << endl;
-	cout << imgs2.capacity() << endl;
-	cout << color_imgs.capacity() << endl;
-	cout << depth_imgs.capacity() << endl;
 }
 
 void get_color_and_depth_imgs(
