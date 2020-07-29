@@ -2,6 +2,8 @@
 #define _SECURE_SCL 0 
 #define BOOST_TYPEOF_EMULATION
 
+#define TEST
+
 #define MSR3DVideo_Ballet 0
 #define Poznan_Fencing 1
 #define Intel_Kermit 2
@@ -17,7 +19,6 @@
 #define S09_A1 12
 #define S10_A2 13
 
-#define TEST
 #define MAXNUM_11X11 331
 #define MAXNUM_9X9 309
 #define MAXNUM_7X7 287
@@ -62,7 +63,7 @@ typedef struct {
 	Matrix4d m_ProjMatrix;
 } CalibStruct;
 
-extern int data_mode, _width, _height, total_num_cameras, total_num_frames, color_bits, depth_bits, mask_size, furthest_index;
+extern int data_mode, _width, _height, total_num_cameras, total_num_frames;
 extern double MinZ, MaxZ, scaleZ;
 extern vector<Vector2d> tech_minmaxZ;
 extern string path;
@@ -91,7 +92,8 @@ public:
 	virtual void SetColor(Vec3b color, int idx) {}
 	virtual void SetColor(uchar v_, uchar u_, uchar y_, int idx) {}
 	virtual void SetColor(uchar refv, uchar refu, vector<uchar> vu, vector<uchar> y) {}
-
+	virtual void SetOcclusionZero() {}
+	virtual void SetZero() {}
 	//v2.2
 	virtual int GetColorNum() { return 0; }
 	virtual uchar GetV() { return 0; }
@@ -119,9 +121,27 @@ public:
 		occlusion = vector<bool>(total_num_cameras, false);
 	}
 
+	~PPC_v1() {
+
+	}
+
 	bool CheckOcclusion(int idx)
 	{
 		return !occlusion[idx];
+	}
+
+	void SetZero()
+	{
+		for (int cam = 0; cam < total_num_cameras; cam++) {
+			occlusion[cam] = false;
+			Y[cam] = 0;
+			U[cam] = 0;
+			V[cam] = 0;
+		}
+	}
+
+	vector<bool> GetOcclusion() {
+		return occlusion;
 	}
 
 	Vec3b GetColor(int idx)
@@ -173,7 +193,6 @@ public:
 		Y[idx] = point.b;
 		occlusion[idx] = true;
 	}
-
 };
 
 class PPC_v2_1 : public PPC {

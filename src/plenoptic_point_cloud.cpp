@@ -561,237 +561,6 @@ vector<PPC*> make_incremental_Plen_PC(
 	return Plen_PC;
 }
 
-//vector<PPC*> make_sequenced_Plen_PC(
-//	vector<Mat> color_imgs,
-//	vector<Mat> depth_imgs,
-//	int colorspace,
-//	vector<int> camera_order)
-//{
-//	vector<PPC*> Plen_PC;
-//	int c_threshold = 256; //7;
-//
-//	PointCloud<PointXYZRGB>::Ptr firstPC;
-//	if (version == 2.1) {
-//		firstPC = make_PC(0, color_imgs[0], depth_imgs[0]);
-//	}
-//	else if (version == 2.2) {
-//		firstPC = make_PC(0, color_imgs[0], depth_imgs[0]);
-//	}
-//
-//	// 첫번째 view 
-//	for (int point_idx = 0; point_idx < firstPC->points.size(); point_idx++) {
-//		PPC* point_ppc;
-//
-//		if(version==2.1) point_ppc = new PPC_v2_1();
-//		else if(version == 2.2) point_ppc = new PPC_v2_2();
-//		
-//		point_ppc->SetGeometry(firstPC->points[point_idx]);
-//
-//		if(version == 2.1 || version == 3.1) point_ppc->SetRefColor(firstPC->points[point_idx], 0);
-//		else if(version == 2.2 || version == 3.2) point_ppc->SetColor(firstPC->points[point_idx], 0);  
-//
-//		Plen_PC.push_back(point_ppc);
-//	}
-//
-//	for (int i = 1; i < total_num_cameras; i++) {
-//		int cam = i;// camera_order[i];
-//
-//		int u;
-//		int v;
-//
-//		double w;
-//
-//		Mat color_img(_height, _width, CV_8UC3, Scalar(0));
-//		Mat confirm_img(_height, _width, CV_32S, -1);
-//
-//		Vec3b d;
-//		Vec3s d_s;
-//
-//		for (int point_idx = 0; point_idx < Plen_PC.size(); point_idx++) {
-//			float* geometry = Plen_PC[point_idx]->GetGeometry();
-//
-//			double X = geometry[0];
-//			double Y = geometry[1];
-//			double Z = geometry[2];
-//
-//			w = projection_XYZ_2_UV(
-//				m_CalibParams[cam].m_ProjMatrix,
-//				X,
-//				Y,
-//				Z,
-//				u,
-//				v); 
-//
-//			if ((u < 0) || (v < 0) || (u > _width - 1) || (v > _height - 1)) continue;
-//
-//			confirm_img.at<int>(v, u) = point_idx;
-//		}
-//		
-//		for (int v = 0; v < _height; v++) {
-//			for (int u = 0; u < _width; u++) {
-//				Vec3b color = color_imgs[cam].at<Vec3b>(v, u);
-//
-//				double X;
-//				double Y;
-//				double Z;
-//
-//				switch (data_mode) {
-//				case 0:
-//					d = depth_imgs[cam].at<Vec3b>(v, u);
-//					Z = depth_level_2_Z(d[0]);
-//					break;
-//				case 1:
-//				case 2:
-//					d_s = depth_imgs[cam].at<Vec3s>(v, u);
-//					Z = depth_level_2_Z_s(d_s[0]);
-//					break;
-//				case 3:
-//					d_s = depth_imgs[cam].at<Vec3s>(v, u);
-//					Z = depth_level_2_Z_s(d_s[0], cam);
-//					break;
-//				case 4:
-//				case 5:
-//				case 6:
-//				case 7:
-//				case 8:
-//				case 9:
-//				case 10:
-//				case 11:
-//				case 12:
-//				case 13:
-//					Z = depth_level_2_Z_s_direct(depth_imgs[cam].at<ushort>(v, u));
-//					break;
-//				}
-//
-//				if (!data_mode) projection_UVZ_2_XY_PC(m_CalibParams[cam].m_ProjMatrix, u, v, Z, &X, &Y);
-//				else Z = MVG(m_CalibParams[cam].m_K, m_CalibParams[cam].m_RotMatrix, m_CalibParams[cam].m_Trans, u, v, Z, &X, &Y);
-//
-//				// projection ok
-//				if (confirm_img.at<int>(v, u) == -1) {
-//					
-//					PPC* point_ppc;
-//					if (version == 2.1 ) point_ppc = new PPC_v2_1();
-//					else if (version == 2.2 ) point_ppc = new PPC_v2_2();
-//
-//					float geo[3] = { X,Y,Z };
-//					point_ppc->SetGeometry(geo);
-//					if (version == 2.1) point_ppc->SetRefColor(color, cam);
-//					else if (version == 2.2) point_ppc->SetColor(color, cam);
-//
-//					Plen_PC.push_back(point_ppc);
-//				}
-//				// projection not ok
-//				else
-//				{
-//					int point_idx = confirm_img.at<int>(v, u);
-//
-//					int nearCamNum = 0;
-//					for (int c = cam - 1; c >= 0; c--) {
-//						if (!Plen_PC[point_idx]->CheckOcclusion(c)) {
-//							nearCamNum = c;
-//							break;
-//						}
-//					}
-//
-//					if (colorspace == 0) { //YUV
-//						int sub_V = color[2] - Plen_PC[point_idx]->GetColor(nearCamNum)[0];
-//						int sub_U = color[1] - Plen_PC[point_idx]->GetColor(nearCamNum)[1];
-//
-//						// color thres
-//						if (abs(sub_U) < c_threshold && abs(sub_V) < c_threshold) {
-//							Plen_PC[point_idx]->SetColor(color, cam);
-//						}
-//						else {
-//							PPC* point_ppc;
-//							if (version == 2.1) point_ppc = new PPC_v2_1();
-//							else if (version == 2.2) point_ppc = new PPC_v2_2();
-//
-//							float geo[3] = { X,Y,Z };
-//							point_ppc->SetGeometry(geo);
-//							if (version == 2.1) point_ppc->SetRefColor(color, cam);
-//							else if (version == 2.2) point_ppc->SetColor(color, cam);
-//
-//							Plen_PC.push_back(point_ppc);
-//						}
-//					}
-//					else if (colorspace == 1) { //HSV
-//
-//						Mat hsv_org(1, 1, CV_8UC3);
-//						hsv_org.at<Vec3b>(0, 0) = color;
-//						cvtColor(hsv_org, hsv_org, CV_YUV2BGR);
-//						cvtColor(hsv_org, hsv_org, CV_BGR2HSV);
-//
-//						Mat hsv_ppc(1, 1, CV_8UC3);
-//						hsv_ppc.at<Vec3b>(0, 0)[0] = Plen_PC[point_idx]->GetColor(nearCamNum)[2];
-//						hsv_ppc.at<Vec3b>(0, 0)[1] = Plen_PC[point_idx]->GetColor(nearCamNum)[1];
-//						hsv_ppc.at<Vec3b>(0, 0)[2] = Plen_PC[point_idx]->GetColor(nearCamNum)[0];
-//						cvtColor(hsv_ppc, hsv_ppc, CV_YUV2BGR);
-//						cvtColor(hsv_ppc, hsv_ppc, CV_BGR2HSV);
-//
-//						int sub_H = hsv_org.at<Vec3b>(0, 0)[0] - hsv_ppc.at<Vec3b>(0, 0)[0];
-//						int sub_S = hsv_org.at<Vec3b>(0, 0)[1] - hsv_ppc.at<Vec3b>(0, 0)[1];
-//
-//						// color thres
-//						if (abs(sub_H) < c_threshold && abs(sub_S) < c_threshold) {
-//							Plen_PC[point_idx]->SetColor(color, cam);
-//						}
-//						else {
-//							PPC* point_ppc;
-//							if (version == 2.1 ) point_ppc = new PPC_v2_1();
-//							else if (version == 2.2 ) point_ppc = new PPC_v2_2();
-//
-//							float geo[3] = { X,Y,Z };
-//							point_ppc->SetGeometry(geo);
-//							if (version == 2.1) point_ppc->SetRefColor(color, cam);
-//							else if (version == 2.2) point_ppc->SetColor(color, cam);
-//
-//							Plen_PC.push_back(point_ppc);
-//						}
-//
-//					}
-//					else if (colorspace == 2) { //RGB
-//
-//						Mat bgr_org(1, 1, CV_8UC3);
-//						bgr_org.at<Vec3b>(0, 0) = color;
-//						cvtColor(bgr_org, bgr_org, CV_YUV2BGR);
-//
-//						Mat bgr_ppc(1, 1, CV_8UC3);
-//						bgr_ppc.at<Vec3b>(0, 0)[0] = Plen_PC[point_idx]->GetColor(nearCamNum)[2];
-//						bgr_ppc.at<Vec3b>(0, 0)[1] = Plen_PC[point_idx]->GetColor(nearCamNum)[1];
-//						bgr_ppc.at<Vec3b>(0, 0)[2] = Plen_PC[point_idx]->GetColor(nearCamNum)[0];
-//						cvtColor(bgr_ppc, bgr_ppc, CV_YUV2BGR);
-//
-//						int sub_B = bgr_org.at<Vec3b>(0, 0)[0] - bgr_ppc.at<Vec3b>(0, 0)[0];
-//						int sub_G = bgr_org.at<Vec3b>(0, 0)[1] - bgr_ppc.at<Vec3b>(0, 0)[1];
-//						int sub_R = bgr_org.at<Vec3b>(0, 0)[2] - bgr_ppc.at<Vec3b>(0, 0)[2];
-//
-//						// color thres
-//						if (abs(sub_B) < c_threshold && abs(sub_G) < c_threshold && abs(sub_R) < c_threshold) {
-//							Plen_PC[point_idx]->SetColor(color, cam);
-//						}
-//						else {
-//							PPC* point_ppc;
-//							if (version == 2.1 || version == 3.1) point_ppc = new PPC_v2_1();
-//							else if (version == 2.2 || version == 3.2) point_ppc = new PPC_v2_2();
-//
-//							float geo[3] = { X,Y,Z };
-//							point_ppc->SetGeometry(geo);
-//							if (version == 2.1 || version == 3.1) point_ppc->SetRefColor(color, cam);
-//							else if (version == 2.2 || version == 3.2) point_ppc->SetColor(color, cam);
-//
-//							Plen_PC.push_back(point_ppc);
-//						}
-//					}
-//				}
-//			}
-//		}
-//	}
-//	
-//	Plen_PC.shrink_to_fit();
-//
-//	return Plen_PC;
-//}
-
 vector<PPC*> make_voxelized_Plen_PC(
 	vector<PointCloud<PointXYZRGB>::Ptr> pointclouds,
 	int voxel_div_num) {
@@ -1080,153 +849,6 @@ vector<PPC*> make_voxelized_Plen_PC(
 	return voxelized_PPC;
 }
 
-vector<PPC*> make_modified_Batch_Plen_PC(
-	vector<Mat> color_imgs,
-	vector<Mat> depth_imgs,
-	int voxel_div_num) {
-
-	vector<PPC*> Plen_PC = make_incremental_Plen_PC(color_imgs, depth_imgs, 0, camera_order);
-
-	vector<float> min(3), max(3);
-	find_min_max(Plen_PC, min, max);
-
-	Plen_PC.clear();
-
-	/////////////
-	version = 1.0;
-
-	float Cube_x_size = max[0] - min[0];
-	float Cube_y_size = max[1] - min[1];
-	float Cube_z_size = max[2] - min[2];
-
-	float cube_x_size = Cube_x_size / voxel_div_num;
-	float cube_y_size = Cube_y_size / voxel_div_num;
-	float cube_z_size = Cube_z_size / voxel_div_num;
-
-	cout << "Cube_x_size : " << Cube_x_size << "\tCube_y_size : " << Cube_y_size << "\tCube_z_size : " << Cube_z_size << endl;
-	cout << "cube_x_size : " << cube_x_size << "\tcube_y_size : " << cube_y_size << "\tcube_z_size : " << cube_z_size << endl;
-
-	/////////////////////////////////////////////
-	double depth_threshold = sqrt((cube_x_size * cube_x_size) + (cube_y_size * cube_y_size) + (cube_z_size * cube_z_size)) * 0.5;
-	/////////////////////////////////////////////
-
-	Mat confirm_img(_height, _width, CV_8UC1, Scalar(0));
-	vector<Mat> confirm_imgs(total_num_cameras, confirm_img);
-
-	vector<PPC*> ppc_vec;
-
-	double max_max_dist = 0.;
-	for (int x_idx = 0; x_idx < voxel_div_num; x_idx++) {
-		for (int y_idx = 0; y_idx < voxel_div_num; y_idx++) {
-			for (int z_idx = 0; z_idx < voxel_div_num; z_idx++) {
-				
-				bool is_first_color = true;
-				PPC* point_ppc;
-
-				float X = min[0] + (x_idx * cube_x_size) + (cube_x_size / 2.0);
-				float Y = min[1] + (y_idx * cube_y_size) + (cube_y_size / 2.0);
-				float Z = min[2] + (z_idx * cube_z_size) + (cube_z_size / 2.0);
-
-				
-				double max_dist = 0.; 
-				for (int cam = 0; cam < total_num_cameras; cam++) {
-
-					PointXYZ p;
-
-					p.x = X;
-					p.y = Y;
-					p.z = Z;
-
-					int u, v;
-
-					double w = projection_XYZ_2_UV(
-						m_CalibParams[cam].m_ProjMatrix,
-						(double)X,
-						(double)Y,
-						(double)Z,
-						u,
-						v);
-
-					//복셀의 중점과 image plane과의 거리값 계산
-					double dist_point2camera = find_point_dist(w, cam);
-
-					if ((u < 0) || (v < 0) || (u > _width - 1) || (v > _height - 1)) continue;
-
-					//confirm_img로 색상할당 판별
-					//if (confirm_imgs[cam].at<uchar>(v, u) != uchar(0)) continue;
-
-
-					//원본거리값 계산
-					double X_origin, Y_origin, Z_origin;
-					switch (data_mode) {
-					case 0:
-
-						Z_origin = depth_level_2_Z(depth_imgs[cam].at<Vec3b>(v, u)[0]);
-						break;
-
-					case 1: case 2: case 3:
-
-						Z_origin = depth_level_2_Z_s(depth_imgs[cam].at<Vec3s>(v, u)[0]);
-						break;
-
-					case 4: case 5: case 6: case 7: case 8: case 9:
-					case 10: case 11: case 12: case 13:
-						Z_origin = depth_level_2_Z_s_direct(depth_imgs[cam].at<ushort>(v, u));
-						break;
-					}
-					if (!data_mode) projection_UVZ_2_XY_PC(m_CalibParams[cam].m_ProjMatrix, u, v, Z_origin, &X_origin, &Y_origin);
-					else Z_origin = MVG(m_CalibParams[cam].m_K, m_CalibParams[cam].m_RotMatrix, m_CalibParams[cam].m_Trans, u, v, Z_origin, &X_origin, &Y_origin);
-
-					double w_origin = m_CalibParams[cam].m_ProjMatrix(2, 0)* X_origin + m_CalibParams[cam].m_ProjMatrix(2, 1) * Y_origin + m_CalibParams[cam].m_ProjMatrix(2, 2) * Z_origin + m_CalibParams[cam].m_ProjMatrix(2, 3);
-					//double w_origin = projection_XYZ_2_UV(m_CalibParams[cam].m_ProjMatrix, X_origin, Y_origin, Z_origin, u, v);
-					double dist_origin = find_point_dist(w_origin, cam);
-
-					//if (max_dist < abs(dist_origin - dist_point2camera)) max_dist = abs(dist_origin - dist_point2camera);
-
-					//cout << "dist_origin :\t" << dist_origin << "\tdist_point2camera :\t" << dist_point2camera << "\tsub :\t" << abs(dist_origin - dist_point2camera) << endl;
-					
-					// 원본 거리값과 복셀의 중점과의 거리 오차로 색상할당 판별 
-					if (abs(dist_origin - dist_point2camera) < depth_threshold) {
-
-						//confirm_imgs[cam].at<uchar>(v, u) = uchar(1);
-
-						if (is_first_color) {
-							float geo[3] = { X, Y, Z };
-							if (version == 2.1) {
-								point_ppc = new PPC_v2_1();
-
-								point_ppc->SetGeometry(geo);
-								point_ppc->SetRefColor(color_imgs[cam].at<Vec3b>(v, u), cam);
-							}
-							else if (version == 2.2) { 
-								point_ppc = new PPC_v2_2();
-
-								point_ppc->SetGeometry(geo);
-								point_ppc->SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
-							}
-							else if (version == 1.0) {
-								point_ppc = new PPC_v1();
-
-								point_ppc->SetGeometry(geo);
-								point_ppc->SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
-							}
-							is_first_color = false;
-						}
-						else {
-							point_ppc->SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
-						}
-					}
-				}
-				if (max_dist > max_max_dist) max_max_dist = max_dist;
-				if(!is_first_color)	ppc_vec.push_back(point_ppc);
-			}
-		}
-	}
-	cout << "max_max_dist : " << max_max_dist << endl;
-
-	return ppc_vec;
-}
-
 void extract_largeNunit_CubeSize(
 	vector<float>& min, 
 	vector<float>& max, 
@@ -1448,53 +1070,48 @@ vector<PPC*> make_modified_Batch_Plen_PC2(
 	return ppc_vec;
 }
 
-void make_modified_Batch_Plen_PC2_global(
+//2020.07.27 by sung soo hwang
+void find_min_max_3D_space(
+	vector<PointCloud<PointXYZRGB>::Ptr> &pointclouds,
 	vector<Mat> color_imgs,
 	vector<Mat> depth_imgs,
-	int voxel_div_num,
-	vector<float>& Cube_size,
-	vector<float>& cube_size) {
-
-	vector<PointCloud<PointXYZRGB>::Ptr> pointclouds = make_all_PC(color_imgs, depth_imgs);
-
-	PROCESS_MEMORY_COUNTERS_EX g_mc, pmc;
-	GetProcessMemoryInfo(GetCurrentProcess(),
-		(PROCESS_MEMORY_COUNTERS*)&g_mc, sizeof(g_mc));
-
-	vector<float> min(3), max(3);
+	vector<float>& min,
+	vector<float>& max) {
+	cout << "find_min_max_3D_space is proceeding ... " << endl;
+	pointclouds = make_all_PC(color_imgs, depth_imgs);
 	find_min_max(pointclouds, min, max);
+	cout << "find_min_max_3D_space is done ..." << endl;
+}
 
-	extract_largeNunit_CubeSize(min, max, voxel_div_num, Cube_size, cube_size);
+void find_valid_voxels(
+	vector<PointCloud<PointXYZRGB>::Ptr> &pointclouds,
+	vector<float> min,
+	vector<float> max,
+	int voxel_div_num,
+	vector<float>& space_size,
+	vector<float>& voxel_size,
+	set<unsigned long long> &valid_cube_indices) {
 
-	GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-	printf("extract_largeNunit_CubeSize Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
+	cout << "find_valid_voxels is proceeding ..." << endl;
+	extract_largeNunit_CubeSize(min, max, voxel_div_num, space_size, voxel_size);
+	valid_cube_indices = find_valid_cube_indices(pointclouds, voxel_div_num, min, space_size, voxel_size);
+	cout << "find_valid_voxels is done ..." << endl;
+}
 
-	GetProcessMemoryInfo(GetCurrentProcess(),
-		(PROCESS_MEMORY_COUNTERS*)&g_mc, sizeof(g_mc));
+void make_PPC_modified_batch(
+	int iteration,
+	int max_ppc_size,
+	vector<float> min,
+	int voxel_div_num,
+	vector<Mat> color_imgs,
+	vector<Mat> depth_imgs,
+	vector<float>& space_size,
+	vector<float>& voxel_size,
+	set<unsigned long long>& valid_cube_indices,
+	bool &end_ppc_generation,
+	int &cur_ppc_size) {
 
-	set<unsigned long long> valid_cube_indices;
-	valid_cube_indices = find_valid_cube_indices(pointclouds, voxel_div_num, min, Cube_size, cube_size);
-
-	GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-	printf("find_valid_cube_indices before clear Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
-
-	pointclouds.clear();
-	vector<PointCloud<PointXYZRGB>::Ptr>().swap(pointclouds);
-
-	GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-	printf("find_valid_cube_indices after clear Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
-
-
-	/////////////////////////////////////////////
-	double depth_threshold = sqrt((cube_size[0] * cube_size[0]) + (cube_size[1] * cube_size[1]) + (cube_size[2] * cube_size[2]));// *0.5;
-	/////////////////////////////////////////////
-
-	GetProcessMemoryInfo(GetCurrentProcess(),
-		(PROCESS_MEMORY_COUNTERS*)&g_mc, sizeof(g_mc));
-
-	//vector<PPC*> ppc_vec;
-
-	set<unsigned long long>::iterator cube_index_iter;
+	cout << "make_PPC_modified_batch is proceeding..." << endl;
 	int cnt = 0;
 
 	unsigned long long voxel_div_num_ = voxel_div_num;
@@ -1506,30 +1123,41 @@ void make_modified_Batch_Plen_PC2_global(
 	int cnt_first = 0;
 
 	int ppc_idx = 0;
-	if (version == 1.0) {
-		ppc_global = new PPC_v1[int(valid_cube_indices.size())];
-	}
+	double depth_threshold = sqrt((voxel_size[0] * voxel_size[0]) + (voxel_size[1] * voxel_size[1]) + (voxel_size[2] * voxel_size[2]));// *0.5;
 
-	for (cube_index_iter = valid_cube_indices.begin(); cube_index_iter != valid_cube_indices.end(); cube_index_iter++) {
-		if (cnt % 10000000 == 0) cout << cnt << "th cube is being produced . . " << endl;
+	set<unsigned long long>::iterator cube_index_iter;
 
+	cube_index_iter = valid_cube_indices.begin();
+	for (int i = 0; i < max_ppc_size * iteration; i++) cube_index_iter++;
+
+	set<unsigned long long>::iterator end_iter = valid_cube_indices.end();
+	int cube_count = 0;
+	while(1){
+		if (cube_count == max_ppc_size) {
+			cur_ppc_size = ppc_idx;
+			break;
+		}
+		if (cube_index_iter == end_iter) {
+			cur_ppc_size = ppc_idx;
+			end_ppc_generation = true;
+			break;
+		}
+
+		if (ppc_idx % 10000000 == 0)
+			cout << ppc_idx << "th ppc is being made..." << endl;
 		unsigned long long cube_index = *cube_index_iter;
-
 		x_idx = int(cube_index / (voxel_div_num_ * voxel_div_num_));
 		y_idx = int((cube_index % (voxel_div_num_ * voxel_div_num_)) / voxel_div_num);
 		z_idx = int((cube_index % (voxel_div_num_ * voxel_div_num_)) % voxel_div_num);
 
-		X = (float(x_idx) / (voxel_div_num - 1) * Cube_size[0]) + min[0] + (cube_size[0] / 2);
-		Y = (float(y_idx) / (voxel_div_num - 1) * Cube_size[1]) + min[1] + (cube_size[1] / 2);
-		Z = (float(z_idx) / (voxel_div_num - 1) * Cube_size[2]) + min[2] + (cube_size[2] / 2);
+		X = (float(x_idx) / (voxel_div_num - 1) * space_size[0]) + min[0] + (voxel_size[0] / 2);
+		Y = (float(y_idx) / (voxel_div_num - 1) * space_size[1]) + min[1] + (voxel_size[1] / 2);
+		Z = (float(z_idx) / (voxel_div_num - 1) * space_size[2]) + min[2] + (voxel_size[2] / 2);
 
-		//cout << "X :" << X << "\tY : " << Y << "\tZ : " << Z << endl;
 		bool is_first_color = true;
-		//PPC* point_ppc; //빼보자.
-
 		cnt++;
-		for (int cam = 0; cam < total_num_cameras; cam++) {
 
+		for (int cam = 0; cam < total_num_cameras; cam++) {
 			w = projection_XYZ_2_UV(
 				m_CalibParams[cam].m_ProjMatrix,
 				(double)X,
@@ -1569,68 +1197,33 @@ void make_modified_Batch_Plen_PC2_global(
 			if (abs(dist_origin - dist_point2camera) < depth_threshold) {
 				if (is_first_color) {
 					float geo[3] = { X, Y, Z };
-					/*if (version == 1.0) {
-						point_ppc = new PPC_v1();
-
-						point_ppc->SetGeometry(geo);
-						point_ppc->SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
-					}
-					else if (version == 2.1) {
-						point_ppc = new PPC_v2_1();
-
-						point_ppc->SetGeometry(geo);
-						point_ppc->SetRefColor(color_imgs[cam].at<Vec3b>(v, u), cam);
-					}
-					else if (version == 2.2) {
-						point_ppc = new PPC_v2_2();
-
-						point_ppc->SetGeometry(geo);
-						point_ppc->SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
-					}*/
 
 					if (version == 1.0) {
-						ppc_global[ppc_idx].SetGeometry(geo);
-						ppc_global[ppc_idx].SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
-					}
-					else if (version == 2.1) {
-						ppc_global[ppc_idx].SetGeometry(geo);
-						ppc_global[ppc_idx].SetRefColor(color_imgs[cam].at<Vec3b>(v, u), cam);
-					}
-					else if (version == 2.2) {
-						ppc_global[ppc_idx].SetGeometry(geo);
-						ppc_global[ppc_idx].SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
+						if (iteration == 0) {
+							ppc_vec[ppc_idx] = PPC_v1();
+						}
+						else {
+							ppc_vec[ppc_idx].SetZero();
+						}
+						ppc_vec[ppc_idx].SetGeometry(geo);
+						ppc_vec[ppc_idx].SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
 					}
 					is_first_color = false;
 				}
 				else {
-					ppc_global[ppc_idx].SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
+					ppc_vec[ppc_idx].SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
 				}
 			}
 		}
 		if (!is_first_color) {
-			//ppc_global.push_back(point_ppc);
 			ppc_idx++;
 		}
-		else cnt_first++;
+	
+		cube_index_iter++;
+		cube_count++;
 	}
-	ppc_size = ppc_idx + 1;
-
-	cout << "valid cube size " << valid_cube_indices.size() << endl;
-	cout << "cnt_fist :" << cnt_first << endl;
-	//cout << "ppc global size : " << ppc_global.size() << endl;
-
-	GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-	printf("make ppc before valid_cube_indices clear Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
-
-	valid_cube_indices.clear();
-	set<unsigned long long>().swap(valid_cube_indices);
-
-
-	GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-	printf("make ppc after valid_cube_indices clear Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
-
-
-	//return ppc_vec;
+	cout << "ppc size : " << ppc_idx << endl;	
+	cout << "make_PPC_modified_batch is done..." << endl;
 }
 
 vector<PointCloud<PointXYZRGB>::Ptr> make_all_PC(
@@ -1694,18 +1287,12 @@ void make_proj_img_vec_ppc(
 			else { non_count++; }
 		}
 
-		//cout << j << "th valid pointcloud 개수 : " << count << endl;
-		//cout << j << "th invalid pointcloud 개수 : " << non_count << endl;
-
 		if(proj_mode == 0) projection(pointcloud, j, color_img, depth_value_img, is_hole_img);
 		else if(proj_mode == 1) back_projection(pointcloud, j, color_img, is_hole_img, nNeighbor);
 		proj_img_vec[j] = color_img;
 		is_hole_proj_imgs[j] = is_hole_img;
 
 		if (j % 10 == 0) cout << j << "th point cloud is being projected .." << endl;
-		
-		//if(j==3) view_PC_yuvTorgb(pointcloud);
-		//else if(j==10) view_PC_yuvTorgb(pointcloud);
 		
 		pointcloud->points.clear();
 	}
@@ -1766,7 +1353,6 @@ void make_proj_img_vec_ppc2_per_viewpoint(
 	Mat& is_hole_proj_img,
 	int nNeighbor)
 {
-
 	//하나의 Mat 객체로 Mat vector를 초기화한다면 vector 요소들이 같은 메모리 참조하기 때문에 이를 방지
 	Mat depth_value_img(_height, _width, CV_64F, -1);
 
@@ -1830,77 +1416,6 @@ void make_proj_img_vec_ppc2_per_viewpoint(
 	}
 }
 
-void make_proj_img_vec_ppc2_per_viewpoint_global(
-	int cam_num,
-	Mat& proj_img,
-	Mat& is_hole_proj_img,
-	int nNeighbor)
-{
-
-	//하나의 Mat 객체로 Mat vector를 초기화한다면 vector 요소들이 같은 메모리 참조하기 때문에 이를 방지
-	Mat depth_value_img(_height, _width, CV_64F, -1);
-
-	float* geo;
-	Vec3b color;
-
-	int u;
-	int v;
-
-	double dist;
-	double w;
-
-	double X;
-	double Y;
-	double Z;
-
-	//uchar* depth_img_data = depth_value_img.data;
-	uchar* proj_img_data = proj_img.data;
-	uchar* is_hole_img_data = is_hole_proj_img.data;
-
-	int cnt1 = 0, cnt2 = 0, cnt3 = 0;
-
-
-
-	for (int ppc_i = 0; ppc_i < ppc_size; ppc_i++) {
-		if (!ppc_global[ppc_i].CheckOcclusion(cam_num)) {
-			geo = ppc_global[ppc_i].GetGeometry();
-			color = ppc_global[ppc_i].GetColor(cam_num);
-
-			X = geo[0];
-			Y = geo[1];
-			Z = geo[2];
-
-			w = projection_XYZ_2_UV(
-				m_CalibParams[cam_num].m_ProjMatrix,
-				X,
-				Y,
-				Z,
-				u,
-				v);
-
-			dist = find_point_dist(w, cam_num);
-
-			if ((u < 0) || (v < 0) || (u > _width - 1) || (v > _height - 1)) return;
-
-			if (*depth_value_img.ptr<double>(v, u) == -1) {
-				*depth_value_img.ptr<double>(v, u) = dist;
-				is_hole_img_data[(_width * v + u)] = 0;
-			}
-			else
-			{
-				if (dist < *depth_value_img.ptr<double>(v, u))
-					*depth_value_img.ptr<double>(v, u) = dist;
-
-				else continue;
-			}
-
-			proj_img_data[(_width * v + u) * 3] = uchar(color[2]);
-			proj_img_data[(_width * v + u) * 3 + 1] = uchar(color[1]);
-			proj_img_data[(_width * v + u) * 3 + 2] = uchar(color[0]);
-		}
-	}
-}
-
 void projection_PPC_with_hole_filling(
 	vector<PPC*> Plen_PC,
 	vector<Mat> &projection_imgs,
@@ -1935,32 +1450,82 @@ void projection_PPC_with_hole_filling_per_viewpoint(
 
 	clock_t t9 = clock();
 	is_hole_filled_img = is_hole_proj_img;
-	HoleFilling_per_viewpoint(projection_img, filled_img, is_hole_filled_img, window_size);
+	holefilling_per_viewpoint(projection_img, filled_img, is_hole_filled_img, window_size);
 	clock_t t10 = clock();
-	cout << "HoleFilling_per_viewpoint: " << float(t10 - t9) / CLOCKS_PER_SEC << endl << endl;
+	cout << "holefilling_per_viewpoint: " << float(t10 - t9) / CLOCKS_PER_SEC << endl << endl;
 
 }
 
-void projection_PPC_with_hole_filling_per_viewpoint_global(
+//2020.07.27 by sung soo hwang
+void perform_projection(
 	int cam_num,
-	Mat& projection_img,
-	Mat& filled_img,
+	int cur_ppc_size,
+	Mat& proj_img,
 	Mat& is_hole_proj_img,
-	Mat& is_hole_filled_img,
-	int nNeighbor,
-	int window_size)
+	Mat& depth_value_img)
 {
-	clock_t t7 = clock();
-	make_proj_img_vec_ppc2_per_viewpoint_global(cam_num, projection_img, is_hole_proj_img, nNeighbor);
-	clock_t t8 = clock();
-	cout << "make_proj_img_vec_ppc2_per_viewpoint : " << float(t8 - t7) / CLOCKS_PER_SEC << endl << endl;
+	//하나의 Mat 객체로 Mat vector를 초기화한다면 vector 요소들이 같은 메모리 참조하기 때문에 이를 방지
+	//Mat depth_value_img(_height, _width, CV_64F, -1);
 
-	clock_t t9 = clock();
-	is_hole_filled_img = is_hole_proj_img;
-	HoleFilling_per_viewpoint(projection_img, filled_img, is_hole_filled_img, window_size);
-	clock_t t10 = clock();
-	cout << "HoleFilling_per_viewpoint: " << float(t10 - t9) / CLOCKS_PER_SEC << endl << endl;
+	float* geo;
+	Vec3b color;
 
+	int u;
+	int v;
+
+	double dist;
+	double w;
+
+	double X;
+	double Y;
+	double Z;
+
+	uchar* proj_img_data = proj_img.data;
+	uchar* is_hole_img_data = is_hole_proj_img.data;
+	int cnt1 = 0, cnt2 = 0, cnt3 = 0;
+
+	int wvu;
+
+	for (int i = 0; i < cur_ppc_size; i++) {
+		if (!ppc_vec[i].CheckOcclusion(cam_num)) {
+			geo = ppc_vec[i].GetGeometry();
+			color = ppc_vec[i].GetColor(cam_num);
+
+			X = geo[0];
+			Y = geo[1];
+			Z = geo[2];
+
+			w = projection_XYZ_2_UV(
+				m_CalibParams[cam_num].m_ProjMatrix,
+				X,
+				Y,
+				Z,
+				u,
+				v);
+
+			dist = find_point_dist(w, cam_num);
+
+			if ((u < 0) || (v < 0) || (u > _width - 1) || (v > _height - 1)) continue;
+
+			wvu = _width * v + u;
+
+			if (*depth_value_img.ptr<double>(v, u) == -1) {
+				*depth_value_img.ptr<double>(v, u) = dist;
+				is_hole_img_data[wvu] = 0;
+			}
+			else
+			{
+				if (dist < *depth_value_img.ptr<double>(v, u))
+					*depth_value_img.ptr<double>(v, u) = dist;
+
+				else continue;
+			}
+
+			proj_img_data[wvu * 3] = uchar(color[2]);
+			proj_img_data[wvu * 3 + 1] = uchar(color[1]);
+			proj_img_data[wvu * 3 + 2] = uchar(color[0]);
+		}
+	}
 }
 
 void hole_filling_PPC(
@@ -1973,7 +1538,7 @@ void hole_filling_PPC(
 
 	for (int num = 0; num < total_num_cameras; num++) {
 		//hole_image = find_hole_PPC(proj_imgs[num]); //hole -> 0
-		HoleFilling_per_viewpoint(proj_imgs[num], filled_imgs[num], is_hole_filled_imgs[num], window_size);
+		holefilling_per_viewpoint(proj_imgs[num], filled_imgs[num], is_hole_filled_imgs[num], window_size);
 	}
 }
 
@@ -1992,7 +1557,7 @@ Mat find_hole_PPC(Mat projection_img)
 	return hole_image;
 }
 
-void HoleFilling_per_viewpoint(Mat colorimg, Mat& filled_image, Mat& hole_image, int window_size){
+void holefilling_per_viewpoint(Mat colorimg, Mat& filled_image, Mat& hole_image, int window_size){
 	//hole_image 
 	//	0-projection ok
 	//	1-hole
@@ -2003,18 +1568,20 @@ void HoleFilling_per_viewpoint(Mat colorimg, Mat& filled_image, Mat& hole_image,
 	uchar* filled_image_data = filled_image.data;
 	uchar* colorimg_data = colorimg.data;
 
+	int wrc, whw;
+
 	for (int rownum = 0; rownum < _height; rownum++){
 		for (int colnum = 0; colnum < _width; colnum++){
 			bool is_not_hole;
 			if (hole_image_data[_width * rownum + colnum] == 0) is_not_hole = true;
 			else is_not_hole = false;
 			//bool is_not_hole = !(hole_image.at<bool>(rownum, colnum));
-
+			wrc = _width * rownum + colnum;
 			if (is_not_hole)
 			{
-				filled_image_data[(_width * rownum + colnum) * 3] = colorimg_data[(_width * rownum + colnum) * 3];
-				filled_image_data[(_width * rownum + colnum) * 3 + 1] = colorimg_data[(_width * rownum + colnum) * 3 + 1];
-				filled_image_data[(_width * rownum + colnum) * 3 + 2] = colorimg_data[(_width * rownum + colnum) * 3 + 2];
+				filled_image_data[wrc * 3] = colorimg_data[wrc * 3];
+				filled_image_data[wrc * 3 + 1] = colorimg_data[wrc * 3 + 1];
+				filled_image_data[wrc * 3 + 2] = colorimg_data[wrc * 3 + 2];
 			}
 			else
 			{
@@ -2029,9 +1596,11 @@ void HoleFilling_per_viewpoint(Mat colorimg, Mat& filled_image, Mat& hole_image,
 						else if (hole_image_data[_width * h + w] !=0) continue;
 						else
 						{
-							pixel_sum[0] += colorimg_data[(_width * h + w) * 3];
-							pixel_sum[1] += colorimg_data[(_width * h + w) * 3 + 1];
-							pixel_sum[2] += colorimg_data[(_width * h + w) * 3 + 2];
+							whw = _width * h + w;
+
+							pixel_sum[0] += colorimg_data[whw * 3];
+							pixel_sum[1] += colorimg_data[whw * 3 + 1];
+							pixel_sum[2] += colorimg_data[whw * 3 + 2];
 							pixel_count++;
 						}
 					}
@@ -2039,16 +1608,16 @@ void HoleFilling_per_viewpoint(Mat colorimg, Mat& filled_image, Mat& hole_image,
 
 				if (pixel_count == 0)
 				{
-					filled_image_data[(_width * rownum + colnum) * 3] = 0;
-					filled_image_data[(_width * rownum + colnum) * 3 + 1] = 0;
-					filled_image_data[(_width * rownum + colnum) * 3 + 2] = 0;
+					filled_image_data[wrc * 3] = 0;
+					filled_image_data[wrc * 3 + 1] = 0;
+					filled_image_data[wrc * 3 + 2] = 0;
 				}
 				else
 				{
-					filled_image_data[(_width * rownum + colnum) * 3] = uchar(pixel_sum[0] / pixel_count);
-					filled_image_data[(_width * rownum + colnum) * 3 + 1] = uchar(pixel_sum[1] / pixel_count);
-					filled_image_data[(_width * rownum + colnum) * 3 + 2] = uchar(pixel_sum[2] / pixel_count);
-					hole_image_data[(_width * rownum + colnum)] = 2;
+					filled_image_data[wrc * 3] = uchar(pixel_sum[0] / pixel_count);
+					filled_image_data[wrc * 3 + 1] = uchar(pixel_sum[1] / pixel_count);
+					filled_image_data[wrc * 3 + 2] = uchar(pixel_sum[2] / pixel_count);
+					hole_image_data[wrc] = 2;
 				}
 			}
 		}
@@ -2122,6 +1691,33 @@ void save_ppc(vector<PPC*> ppc, string filename) {
 
 	fout.close();
 	cout << "save pcc done..." << endl << endl;
+}
+
+void save_ppc_global(int cur_ppc_size, string filename) {
+
+	ofstream fout(filename, ios::binary);
+
+	for (int i = 0; i < cur_ppc_size; i++) {
+		float* geo = ppc_vec[i].GetGeometry();
+		fout.write((char*)&geo[0], sizeof(float));
+		fout.write((char*)&geo[1], sizeof(float));
+		fout.write((char*)&geo[2], sizeof(float));
+
+		vector<bool> occlusions = ppc_vec[i].GetOcclusion();
+		for (int cam = 0; cam < total_num_cameras; cam++) {
+			Vec3b vuy = ppc_vec[i].GetColor(cam);
+			fout.write((char*)&vuy[0], sizeof(uchar));
+			fout.write((char*)&vuy[1], sizeof(uchar));
+			fout.write((char*)&vuy[2], sizeof(uchar));
+
+			fout.write((char*)&occlusions[i], sizeof(uchar));
+		}
+
+
+
+	}
+
+
 }
 
 vector<PPC*> load_ppc(string filename) {
@@ -2202,4 +1798,89 @@ vector<PPC*> load_ppc(string filename) {
 	fin.close();
 	cout << "load pcc done..." << endl << endl;
 	return vec_ppc;
+}
+
+void calc_YUV_dev_global(int cur_ppc_size, vector<vector<float>>& dev_pointnum, vector<int>& point_num_per_color, vector<int>& full_color_dev)
+{
+	cout << "calc_YUV_dev_global method is proceeding ..." << endl;
+	float avr_y = 0, avr_u = 0, avr_v = 0;
+	float avr_y_2 = 0, avr_u_2 = 0, avr_v_2 = 0;
+	int cam_number = 0;
+	Vec3b yuv;
+	float dev_y = 0, dev_u = 0, dev_v = 0;
+	float avr_dev;
+
+	for (int point_num = 0; point_num < cur_ppc_size; point_num++) {
+		avr_y = 0, avr_u = 0, avr_v = 0;
+		avr_y_2 = 0, avr_u_2 = 0, avr_v_2 = 0;
+		cam_number = 0;
+		for (int cam = 0; cam < total_num_cameras; cam++) {
+			if (!ppc_vec[point_num].CheckOcclusion(cam)) {
+				yuv = ppc_vec[point_num].GetColor(cam);
+
+				cam_number++;
+				avr_y += (float)yuv[2];
+				avr_u += (float)yuv[1];
+				avr_v += (float)yuv[0];
+				avr_y_2 += (float)yuv[2] * (float)yuv[2];
+				avr_u_2 += (float)yuv[1] * (float)yuv[1];
+				avr_v_2 += (float)yuv[0] * (float)yuv[0];
+			}
+		}
+		/*if (cam_number == 0) {
+			continue;
+		}*/
+		point_num_per_color[cam_number - 1] ++;
+
+		avr_y /= cam_number;
+		avr_u /= cam_number;
+		avr_v /= cam_number;
+		avr_y_2 /= cam_number;
+		avr_u_2 /= cam_number;
+		avr_v_2 /= cam_number;
+
+
+		dev_y = 0, dev_u = 0, dev_v = 0;
+
+		dev_y = sqrt(avr_y_2 - avr_y * avr_y);
+		dev_u = sqrt(avr_u_2 - avr_u * avr_u);
+		dev_v = sqrt(avr_v_2 - avr_v * avr_v);
+
+		//full_color => dev => num
+
+
+		if (cam_number == total_num_cameras) {
+			if (dev_y >= 0 && dev_y < 5) full_color_dev[0]++;
+			else if (dev_y >= 5 && dev_y < 10) full_color_dev[1]++;
+			else if (dev_y >= 10 && dev_y < 15) full_color_dev[2]++;
+			else if (dev_y >= 15 && dev_y < 20) full_color_dev[3]++;
+			else if (dev_y >= 20 && dev_y < 25) full_color_dev[4]++;
+			else if (dev_y >= 25 && dev_y < 30) full_color_dev[5]++;
+			else if (dev_y >= 30 && dev_y < 35) full_color_dev[6]++;
+			else if (dev_y >= 35 && dev_y < 40) full_color_dev[7]++;
+			else if (dev_y >= 40 && dev_y < 45) full_color_dev[8]++;
+			else if (dev_y >= 45 && dev_y < 50) full_color_dev[9]++;
+			else if (dev_y >= 50 && dev_y < 55) full_color_dev[10]++;
+			else if (dev_y >= 55 && dev_y < 60) full_color_dev[11]++;
+			else if (dev_y >= 60 && dev_y < 65) full_color_dev[12]++;
+			else if (dev_y >= 65 && dev_y < 70) full_color_dev[13]++;
+			else if (dev_y >= 70 && dev_y < 75) full_color_dev[14]++;
+			else if (dev_y >= 75 && dev_y < 80) full_color_dev[15]++;
+			else if (dev_y >= 80 && dev_y < 85) full_color_dev[16]++;
+			else if (dev_y >= 85 && dev_y < 90) full_color_dev[17]++;
+			else if (dev_y >= 90 && dev_y < 95) full_color_dev[18]++;
+			else if (dev_y >= 95 && dev_y < 100) full_color_dev[19]++;
+
+		}
+
+		avr_dev = (dev_y + dev_u + dev_v) / 3.0;
+
+
+		dev_pointnum[cam_number - 1][0] += avr_dev;
+		dev_pointnum[cam_number - 1][1] += dev_y;
+		dev_pointnum[cam_number - 1][2] += dev_u;
+		dev_pointnum[cam_number - 1][3] += dev_v;
+	}
+
+	cout << "calc_YUV_dev method is done ..." << endl << endl;
 }

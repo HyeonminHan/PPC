@@ -18,7 +18,7 @@ Vector3d rad2deg(Vector3d radian);
 Vector3d deg2rad(Vector3d degree);
 string rootDir = "D:\\ETRI\\";
 
-void set_parameters(int data_mode)
+void set_parameters(int data_mode, int& color_bits, int& depth_bits, int & mask_size)
 {
 	switch (data_mode)
 	{
@@ -96,25 +96,6 @@ void set_parameters(int data_mode)
 		path = rootDir + "Technicolor_Painter";
 		break;
 
-
-	//case hotelroom_r2_front_sample:
-	//	//total_num_cameras = 21 * 21;
-	//	total_num_cameras = 121; //121
-	//	total_num_frames = 1;
-
-	//	_width = 3840;
-	//	_height = 2160;
-
-	//	// 안씀.
-	//	MinZ = 0.5283;
-	//	MaxZ = 3.9001;
-
-	//	color_bits = 10;
-	//	depth_bits = 16;
-
-	//	path = rootDir + "hotelroom_r2_front_sample";
-	//	break;
-
 	case S01_H1:case S02_H2:case S03_H3:case S04_H4:
 		//total_num_cameras = 21 * 21;
 		//total_num_cameras = 49; //121
@@ -137,8 +118,6 @@ void set_parameters(int data_mode)
 		else if (data_mode == S04_H4) path = rootDir + "S04_H4";
 		break;
 	case S05_R1:case S06_R2:case S07_R3:case S08_R4:
-		//total_num_cameras = 21 * 21;
-		//total_num_cameras = 49; //121
 		total_num_cameras = mask_size * mask_size;
 		total_num_frames = 1;
 
@@ -179,48 +158,6 @@ void set_parameters(int data_mode)
 	default:
 		cerr << "Wrong data_mode!!!" << endl;
 		exit(0);
-	}
-}
-
-void get_num_camera_N_frame(
-	int &total_num_cameras,
-	int &total_num_frames)
-{
-	//   get cameras
-	string camera_path = path + "\\*";
-
-	struct _finddata_t camera_fd;
-
-	intptr_t camera_handle = _findfirst(camera_path.c_str(), &camera_fd);
-
-	int cameras = 0;
-
-	while (_findnext(camera_handle, &camera_fd) == 0) cameras++;
-
-	_findclose(camera_handle);
-
-	if (!data_mode) total_num_cameras = cameras - 2;
-	else total_num_cameras = cameras / 3;
-
-	//   get frames
-	if (data_mode) total_num_cameras = 300;
-	else {
-		string frame_path = path + "\\cam0\\*.jpg";
-
-		intptr_t frame_handle;
-
-		struct _finddata_t frame_fd;
-
-		frame_handle = _findfirst(frame_path.c_str(), &frame_fd);
-
-		int frames = 0;
-
-		do frames++;
-		while (_findnext(frame_handle, &frame_fd) == 0);
-
-		_findclose(frame_handle);
-
-		total_num_frames = frames;
 	}
 }
 
@@ -648,7 +585,6 @@ void GetRotationMat(Vector3d& euler, Matrix3d& rotationMat)
 	rotationMat = Rx * Ry * Rz;
 }
 
-
 void Euler2RotationMat(Vector3d& euler, Matrix3d& rotationMat)
 {
 	//double sh = sin(euler(2));
@@ -804,7 +740,6 @@ void Euler2RotationMat(Vector3d& euler, Matrix3d& rotationMat)
 
 }
 
-// ī�޶� RT ����
 void compute_projection_matrices()
 {
 	Matrix3d inMat;
@@ -874,7 +809,8 @@ void load_file_name(
 
 void load_file_name(
 	vector<string> &color_names_,
-	vector<string> &depth_names_)
+	vector<string> &depth_names_,
+	int depth_bits)
 {
 	intptr_t color_handle, depth_handle;
 
@@ -919,7 +855,8 @@ void load_file_name(
 void load_file_name_mode4(
 	vector<vector<string>>& color_names,
 	vector<vector<string>>& depth_names,
-	int referenceView)
+	int referenceView,
+	int furthest_index)
 {
 	string cam_path = path;
 	intptr_t color_handle, depth_handle;
@@ -932,6 +869,22 @@ void load_file_name_mode4(
 
 	color_handle = _findfirst(color_path.c_str(), &color_fd);
 	depth_handle = _findfirst(depth_path.c_str(), &depth_fd);
+
+	int temp_num;
+	if (referenceView == 220 && data_mode >= S01_H1) temp_num = referenceView + furthest_index;
+	else temp_num = total_num_cameras;
+
+	//for (int i = 0; i < temp_num; i++) {
+	//	vector<string> temp_vec;
+	//	temp_vec.resize(total_num_frames);
+	//	color_names.push_back(temp_vec);
+	//	depth_names.push_back(temp_vec);
+	//}
+
+	vector<string> temp_vec;
+	temp_vec.resize(total_num_frames);
+	color_names.resize(temp_num, temp_vec);
+	depth_names.resize(temp_num, temp_vec);
 
 	if (referenceView == 220) {
 
@@ -1178,7 +1131,6 @@ void get_RT_data_json(
 	KFocal_vec = KF_vec;
 	KPrinciple_vec = KP_vec;
 }
-
 
 Vector3d rad2deg(Vector3d radian)
 {

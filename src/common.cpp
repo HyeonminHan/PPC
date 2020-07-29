@@ -1,7 +1,7 @@
 #include "common.h"
 #define _CRT_SECURE_NO_WARNINGS
 
-vector<int> make_camOrder(int refView, map<int, int> &LookUpTable) {
+vector<int> make_camOrder(int refView, int mask_size, map<int, int> &LookUpTable) {
 	vector<int> camera_order;
 	if (refView == 220 && data_mode >= 4) {
 		int temp = 0;
@@ -603,117 +603,6 @@ PointCloud<PointXYZRGB>::Ptr make_PC(
 	return pointcloud;
 }
 
-vector<PointCloud<PointXYZRGB>::Ptr> get_PC_of_every_camera(
-	int frame,
-	vector<vector<string>> color_names,
-	vector<vector<string>> depth_names,
-	vector<Mat>& color_imgs,
-	vector<Mat>& depth_imgs)
-{
-	vector<Mat> imgs(total_num_cameras);
-	vector<Mat> imgs2(total_num_cameras);
-
-	vector<PointCloud<PointXYZRGB>::Ptr> pointclouds(total_num_cameras);
-
-	for (int camera = 0; camera < total_num_cameras; camera++)
-	{
-		string folder_path = path + "/cam" + to_string(camera) + "/";
-		Mat color_img, depth_img;
-
-		color_img = imread(folder_path + color_names[camera][frame]);
-		depth_img = imread(folder_path + depth_names[camera][frame]);
-
-		imgs[camera] = color_img;
-		imgs2[camera] = depth_img;
-	}
-
-	for (int camera = 0; camera < total_num_cameras; camera++)
-	{
-		PointCloud<PointXYZRGB>::Ptr pointcloud(new PointCloud<PointXYZRGB>);
-		pointcloud = make_PC(camera, imgs[camera], imgs2[camera]);
-		pointclouds[camera] = pointcloud;
-	}
-
-	color_imgs = imgs;
-	depth_imgs = imgs2;
-
-	return pointclouds;
-}
-
-vector<PointCloud<PointXYZRGB>::Ptr> get_PC_of_every_camera(
-	int frame,
-	vector<string> color_names_,
-	vector<string> depth_names_,
-	vector<Mat>& color_imgs,
-	vector<Mat>& depth_imgs)
-{
-	vector<Mat> imgs(total_num_cameras);
-	vector<Mat> imgs2(total_num_cameras);
-
-	vector<PointCloud<PointXYZRGB>::Ptr> pointclouds(total_num_cameras);
-
-	for (int camera = 0; camera < total_num_cameras; camera++)
-	{
-		Mat color_img, depth_img;
-
-		//switch (data_mode) {
-		//case Poznan_Fencing:
-		//	color_img = cvt_yuv2bgr(path + "\\" + color_names_[camera], frame, color_bits);
-		//	if (depth_bits == 8) depth_img = cvt_yuv2bgr(path + "\\" + depth_names_[camera], frame, depth_bits);
-		//	else depth_img = cvt_yuv2bgr(path + "\\" + depth_names_[camera], frame, depth_bits, 0);
-		//	break;
-
-		//case Intel_Kermit:
-		//case Technicolor_Painter:
-		//	color_img = cvt_yuv2bgr(path + "\\" + color_names_[camera], frame, color_bits);
-		//	depth_img = cvt_yuv2bgr(path + "\\" + depth_names_[camera], frame, depth_bits);
-
-
-		//	//imshow("color img", color_img);
-		//	//imshow("depth img", depth_img);
-		//	//waitKey(0);
-		//	//imwrite(color_names_[camera]+".png", color_img);
-		//	//imwrite(depth_names_[camera] + ".png", depth_img);
-		//	break;
-		//}
-
-		switch (data_mode) {
-		case Poznan_Fencing:
-			color_img = readYUV(path + "\\" + color_names_[camera], frame, color_bits);
-			if (depth_bits == 8) depth_img = cvt_yuv2bgr(path + "\\" + depth_names_[camera], frame, depth_bits);
-			else depth_img = cvt_yuv2bgr(path + "\\" + depth_names_[camera], frame, depth_bits, 0);
-			break;
-
-		case Intel_Kermit:
-		case Technicolor_Painter:
-			color_img = readYUV(path + "\\" + color_names_[camera], frame, color_bits);
-			depth_img = cvt_yuv2bgr(path + "\\" + depth_names_[camera], frame, depth_bits);
-
-			//imshow("color img", color_img);
-			//imshow("depth img", depth_img);
-			//waitKey(0);
-			//imwrite(color_names_[camera]+".png", color_img);
-			//imwrite(depth_names_[camera] + ".png", depth_img);
-			break;
-		}
-
-		imgs[camera] = color_img;
-		imgs2[camera] = depth_img;
-	}
-
-	for (int camera = 0; camera < total_num_cameras; camera++)
-	{
-		PointCloud<PointXYZRGB>::Ptr pointcloud(new PointCloud<PointXYZRGB>);
-		pointcloud = make_PC(camera, imgs[camera], imgs2[camera]);
-		pointclouds[camera] = pointcloud;
-	}
-
-	color_imgs = imgs;
-	depth_imgs = imgs2;
-
-	return pointclouds;
-}
-
 void get_color_and_depth_imgs(
 	int frame,
 	vector<int> camera_order,
@@ -789,7 +678,9 @@ void get_color_and_depth_imgs(
 	vector<string> color_names_,
 	vector<string> depth_names_,
 	vector<Mat>& color_imgs,
-	vector<Mat>& depth_imgs)
+	vector<Mat>& depth_imgs,
+	int color_bits,
+	int depth_bits)
 {
 	vector<Mat> imgs(total_num_cameras);
 	vector<Mat> imgs2(total_num_cameras);
@@ -819,46 +710,6 @@ void get_color_and_depth_imgs(
 
 	color_imgs = imgs;
 	depth_imgs = imgs2;
-}
-
-
-double dequantization(unsigned short norm, double min, double max)
-{
-	double denorm;
-
-	denorm = (norm / 65535.0) * (max - min) + min;
-
-	return denorm;
-}
-
-unsigned short quantization(double denorm, double min, double max)
-{
-	unsigned short norm;
-
-	norm = ((denorm - min) * 65535.0) / (max - min);
-
-	return norm;
-}
-
-PointCloud<PointXYZRGB>::Ptr make_registered_PC(
-	vector<PointCloud<PointXYZRGB>::Ptr> pointclouds)
-{
-	///* icp */
-	//pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
-	//icp.setInputSource(cloud_in);
-	//icp.setInputTarget(cloud_out);
-	//pcl::PointCloud<pcl::PointXYZRGB> Final;
-	//icp.align(Final);
-	//std::cout << "has converged:" << icp.hasConverged() << " score: " <<
-	//   icp.getFitnessScore() << std::endl;
-	//std::cout << icp.getFinalTransformation() << std::endl;
-
-	PointCloud<PointXYZRGB>::Ptr registered_PC(new PointCloud<PointXYZRGB>);
-	for (int camera = 0; camera < total_num_cameras; camera++)
-		for (int point_idx = 0; point_idx < pointclouds[camera]->points.size(); point_idx++)
-			registered_PC->points.push_back(pointclouds[camera]->points[point_idx]);
-
-	return registered_PC;
 }
 
 void find_min_max(
@@ -1004,41 +855,6 @@ void view_PC(PointCloud<PointXYZRGB>::Ptr pointcloud, int cam_idx)
 	PointCloudColorHandlerRGBField<pcl::PointXYZRGB > rgb_handler(pointcloud);
 	viewer.addPointCloud(pointcloud, rgb_handler, "result", v1);
 	while (!viewer.wasStopped()) viewer.spinOnce();
-}
-
-void view_PC(PointCloud<PointXYZRGB>::Ptr pointcloud1, PointCloud<PointXYZRGB>::Ptr pointcloud2) {
-	{
-		int v1 = 0;
-
-		PCLVisualizer viewer("PC viewer demo");
-		viewer.setSize(1280, 1000);
-		viewer.createViewPort(0.0, 0.0, 1.0, 1.0, v1);
-		viewer.addCoordinateSystem(5.0);
-		//Matrix4f extrinsic;
-		//for (int i = 0; i < 3; i++)
-		//	for (int j = 0; j < 3; j++)
-		//		extrinsic(i, j) = (float)m_CalibParams[0].m_RotMatrix(i, j);
-
-		//for (int i = 0; i < 3; i++)
-		//	extrinsic(i, 3) = (float)m_CalibParams[0].m_Trans(i, 0);
-
-		//extrinsic(3, 0) = 0;
-		//extrinsic(3, 1) = 0;
-		//extrinsic(3, 2) = 0;
-		//extrinsic(3, 3) = 1;
-
-		//cout << "extrinsic : "<<extrinsic << endl;
-
-		//viewer.setCameraParameters(m_CalibParams[0].m_K, extrinsic);
-
-		PointCloudColorHandlerRGBField<pcl::PointXYZRGB > rgb_handler1(pointcloud1);
-		viewer.addPointCloud(pointcloud1, rgb_handler1, "result", v1);
-		PointCloudColorHandlerRGBField<pcl::PointXYZRGB > rgb_handler2(pointcloud2);
-		viewer.addPointCloud(pointcloud2, rgb_handler2, "result2", v1);
-
-		while (!viewer.wasStopped()) viewer.spinOnce();
-	}
-
 }
 
 void projection(PointCloud<PointXYZRGB>::Ptr pointcloud, int camera, Mat& img, Mat& depthimg, Mat& is_hole_img)
@@ -1418,7 +1234,7 @@ void printPSNRWithoutBlackPixel_RGB(
 	cout << "number of black pixels : " << n << endl;
 }
 
-// BGR 채널별 따로 
+// BGR each channel
 void printPSNRWithoutBlackPixel_RGB(
 	vector<Mat> orig_imgs,
 	vector<Mat> proj_imgs,
@@ -1651,205 +1467,6 @@ void printPSNR(
 		cout << "cam" << cam_num << " : " << psnrs_r[cam_num] << endl;
 	}
 
-}
-
-
-// YUV 채널별
-void printPSNRWithBlackPixel(
-	vector<Mat> orig_imgs,
-	vector<Mat> proj_imgs,
-	vector<float>& psnrs_y,
-	vector<float>& psnrs_u,
-	vector<float>& psnrs_v)
-{
-	float avgPSNR_y=0, avgPSNR_u=0, avgPSNR_v = 0.0;
-	float avgNumofPixel_y=0, avgNumofPixel_u=0, avgNumofPixel_v = 0.0;
-
-	vector<float> PSNR_vec_y, PSNR_vec_u, PSNR_vec_v;
-	vector<int> hole_num_vec;
-
-	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++)
-	{
-		float mse_y=0, psnr_y=0, tmp_y = 0;
-		float mse_u=0, psnr_u=0, tmp_u = 0;
-		float mse_v=0, psnr_v=0, tmp_v = 0;
-
-		float sum_y=0, sum_u=0, sum_v = 0;
-		int cnt_y=0, cnt_u=0, cnt_v = 0;
-
-		Mat yuv_orig[3];
-		Mat yuv_proj[3];
-
-		split(orig_imgs[cam_num], yuv_orig);
-		split(proj_imgs[cam_num], yuv_proj);
-
-		int n = 0;
-
-		for (int v = 0; v < _height; v++)
-			for (int u = 0; u < _width; u++) {
-
-				if (yuv_proj[0].at<uchar>(v, u) == 0 && yuv_proj[1].at<uchar>(v, u) == 0 && yuv_proj[2].at<uchar>(v, u) == 0) {
-					n++;
-				}
-
-				tmp_y = yuv_orig[0].at<uchar>(v, u) - yuv_proj[0].at<uchar>(v, u);
-				cnt_y++;
-				sum_y += tmp_y * tmp_y;
-
-				tmp_u = yuv_orig[1].at<uchar>(v, u) - yuv_proj[1].at<uchar>(v, u);
-				cnt_u++;
-				sum_u += tmp_u * tmp_u;
-
-				tmp_v = yuv_orig[2].at<uchar>(v, u) - yuv_proj[2].at<uchar>(v, u);
-				cnt_v++;
-				sum_v += tmp_v * tmp_v;
-			}
-
-		mse_y = sum_y / cnt_y;
-		psnr_y = 10 * log10(255 * 255 / mse_y);
-
-		mse_u = sum_u / cnt_u;
-		psnr_u = 10 * log10(255 * 255 / mse_u);
-
-		mse_v = sum_v / cnt_v;
-		psnr_v = 10 * log10(255 * 255 / mse_v);
-
-		PSNR_vec_y.push_back(psnr_y);
-		PSNR_vec_u.push_back(psnr_u);
-		PSNR_vec_v.push_back(psnr_v);
-		hole_num_vec.push_back(n);
-
-		avgPSNR_y += psnr_y;
-		avgNumofPixel_y += n;
-
-		avgPSNR_u += psnr_u;
-		avgNumofPixel_u += n;
-
-		avgPSNR_v += psnr_v;
-		avgNumofPixel_v += n;
-
-		psnrs_y.push_back(psnr_y);
-		psnrs_u.push_back(psnr_u);
-		psnrs_v.push_back(psnr_v);
-	}
-	cout << "PSNR with black pixel ::::::::::::::::::" << endl;
-
-	cout << "Y channel :::::::::::::::" << endl;
-	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++) {
-		cout << "cam" << cam_num << " : " << psnrs_y[cam_num] << endl;
-	}
-
-	cout << "U channel :::::::::::::::" << endl;
-	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++) {
-		cout << "cam" << cam_num << " : " << psnrs_u[cam_num] << endl;
-	}
-
-	cout << "V channel :::::::::::::::" << endl;
-	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++) {
-		cout << "cam" << cam_num << " : " << psnrs_v[cam_num] << endl;
-	}
-
-	avgPSNR_y /= total_num_cameras;
-	avgNumofPixel_y /= total_num_cameras;
-
-	avgPSNR_u /= total_num_cameras;
-	avgNumofPixel_u /= total_num_cameras;
-
-	avgPSNR_v /= total_num_cameras;
-	avgNumofPixel_v /= total_num_cameras;
-}
-
-// YUV 채널별
-void printPSNRWithoutBlackPixel(
-	vector<Mat> orig_imgs,
-	vector<Mat> proj_imgs,
-	vector<float>& psnrs_y,
-	vector<float>& psnrs_u,
-	vector<float>& psnrs_v,
-	vector<int>& num_holes)
-{
-	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++)
-	{
-
-		float mse_y = 0, psnr_y = 0, tmp_y = 0;
-		float mse_u = 0, psnr_u = 0, tmp_u = 0;
-		float mse_v = 0, psnr_v = 0, tmp_v = 0;
-
-		float sum_y = 0, sum_u = 0, sum_v = 0;
-		int cnt_y = 0, cnt_u = 0, cnt_v = 0;
-
-		Mat yuv_orig[3];
-		Mat yuv_proj[3];
-
-		split(orig_imgs[cam_num], yuv_orig);
-		split(proj_imgs[cam_num], yuv_proj);
-
-		int n = 0;
-
-		for (int v = 0; v < _height; v++)
-			for (int u = 0; u < _width; u++) {
-
-				if (yuv_proj[0].at<uchar>(v, u) == 0 && yuv_proj[1].at<uchar>(v, u) == 0 && yuv_proj[2].at<uchar>(v, u) == 0)
-					n++;
-
-				else {
-					tmp_y = yuv_orig[0].at<uchar>(v, u) - yuv_proj[0].at<uchar>(v, u);
-					cnt_y++;
-					sum_y += (tmp_y * tmp_y);
-
-					tmp_u = yuv_orig[1].at<uchar>(v, u) - yuv_proj[1].at<uchar>(v, u);
-					cnt_u++;
-					sum_u += (tmp_u * tmp_u);
-
-					tmp_v = yuv_orig[2].at<uchar>(v, u) - yuv_proj[2].at<uchar>(v, u);
-					cnt_v++;
-					sum_v += (tmp_v * tmp_v);
-
-				}
-			}
-
-		mse_y = sum_y / cnt_y;
-		psnr_y = 10 * log10(255 * 255 / mse_y);
-		//psnr_y = 20 * log10(255 / sqrt(mse_y));
-
-		mse_u = sum_u / cnt_u;
-		psnr_u = 10 * log10(255 * 255 / mse_u);
-		//psnr_u = 20 * log10(255 / sqrt(mse_u));
-
-		mse_v = sum_v / cnt_v;
-		psnr_v = 10 * log10(255 * 255 / mse_v);
-		//psnr_v = 20 * log10(255 / sqrt(mse_v));
-
-
-		num_holes.push_back(n);
-		//num_holes.push_back(n);
-		psnrs_y.push_back(psnr_y);
-		psnrs_u.push_back(psnr_u);
-		psnrs_v.push_back(psnr_v);
-	}
-
-	cout << "num of holes ::::::::::::::::" << endl;
-
-	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++) {
-		cout << "cam" << cam_num << " : " << num_holes[cam_num] << endl;
-	}
-
-	cout << "PSNR without black pixel ::::::::::::::::::" << endl;
-
-	cout << "Y channel :::::::::::::::" << endl;
-	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++) {
-		cout << "cam" << cam_num << " : " << psnrs_y[cam_num] << endl;
-	}
-
-	cout << "U channel :::::::::::::::" << endl;
-	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++) {
-		cout << "cam" << cam_num << " : " << psnrs_u[cam_num] << endl;
-	}
-
-	cout << "V channel :::::::::::::::" << endl;
-	for (int cam_num = 0; cam_num < total_num_cameras; cam_num++) {
-		cout << "cam" << cam_num << " : " << psnrs_v[cam_num] << endl;
-	}
 }
 
 // 3채널 통째로.
@@ -2719,20 +2336,6 @@ double find_point_dist(
 
 }
 
-PointCloud<PointXYZRGB>::Ptr filtering(PointCloud<PointXYZRGB>::Ptr original_PC)
-{
-	PointCloud<PointXYZRGB>::Ptr filtered_PC(new PointCloud<PointXYZRGB>);
-	StatisticalOutlierRemoval<PointXYZRGB> sor;
-
-	sor.setInputCloud(original_PC);
-	sor.setMeanK(200);
-	sor.setStddevMulThresh(1.0);
-	sor.filter(*filtered_PC);
-	return filtered_PC;
-
-
-}
-
 void RGB_dev(vector<PPC> PPC, vector<vector<float>>& dev_pointnum_percent, vector<float>& point_num_per_color)
 {
 	for (int point_num = 0; point_num < PPC.size(); point_num++) {
@@ -3147,7 +2750,6 @@ void YUV_dev3_about_MaxValue(vector<PPC*> PPC, vector<float>& point_num_per_colo
 
 }
 
-
 void printPSNRWithoutBlackPixel(
 	vector<Mat> orig_imgs,
 	vector<Mat> proj_imgs,
@@ -3250,37 +2852,6 @@ void printPSNRWithBlackPixel(
 	avgNumofPixel /= total_num_cameras;
 }
 
-double sum(vector<double> a)
-{
-	double s = 0;
-	for (int i = 0; i < a.size(); i++)
-	{
-		s += a[i];
-	}
-	return s;
-}
-
-double mean(vector<double> a)
-{
-	return sum(a) / a.size();
-}
-
-double sqsum(vector<double> a)
-{
-	double s = 0;
-	for (int i = 0; i < a.size(); i++)
-	{
-		s += pow(a[i], 2);
-	}
-	return s;
-}
-
-double stdev(vector<double> nums)
-{
-	double N = nums.size();
-	return pow(sqsum(nums) / N - pow(sum(nums) / N, 2), 0.5);
-}
-
 vector<double> operator-(vector<double> a, double b)
 {
 	vector<double> retvect;
@@ -3301,69 +2872,6 @@ vector<double> operator*(vector<double> a, vector<double> b)
 	return retvect;
 }
 
-double pearsoncoeff(vector<double> X, vector<double> Y)
-{
-	return sum((X - mean(X)) * (Y - mean(Y))) / (X.size() * stdev(X) * stdev(Y));
-}
-
-double correlationCoefficient(vector<double> X, vector<double> Y, int n)
-{
-
-	double sum_X = 0, sum_Y = 0, sum_XY = 0;
-	double squareSum_X = 0, squareSum_Y = 0;
-
-	for (int i = 0; i < n; i++)
-	{
-		// sum of elements of array X. 
-		sum_X = sum_X + X[i];
-
-		// sum of elements of array Y. 
-		sum_Y = sum_Y + Y[i];
-
-		// sum of X[i] * Y[i]. 
-		sum_XY = sum_XY + X[i] * Y[i];
-
-		// sum of square of array elements. 
-		squareSum_X = squareSum_X + X[i] * X[i];
-		squareSum_Y = squareSum_Y + Y[i] * Y[i];
-	}
-
-	// use formula for calculating correlation coefficient. 
-	double corr = (double)(n * sum_XY - sum_X * sum_Y)
-		/ sqrt((n * squareSum_X - sum_X * sum_X)
-			* (n * squareSum_Y - sum_Y * sum_Y));
-
-	double temp = sqrt((n * squareSum_X - sum_X * sum_X)
-		* (n * squareSum_Y - sum_Y * sum_Y));
-
-	/*cout << "�и� ::\t " << temp << endl;
-	cout << "squareSum_X ::\t" << squareSum_X << endl;
-	cout << "squareSum_Y ::\t" << squareSum_Y << endl;
-	cout << "sum_X ::\t" << sum_X << endl;
-	cout << "sum_X ::\t" << sum_Y << endl;
-	cout << "N ::\t " << n << endl;*/
-
-	return corr;
-}
-
-double cal_color_sim(vector<double> X, vector<double> Y)
-{
-	double abs_sum = 0;
-	double result = 0;
-	for (int i = 0; i < X.size(); i++) {
-		abs_sum = abs(X[i] - Y[i]);
-	}
-
-	result = 1 - (abs_sum / 256);
-	return result;
-}
-
-int combination(int n, int r) {
-	if (n == r || r == 0) return 1;
-	else return combination(n - 1, r - 1) + combination(n - 1, r);
-}
-
-// frustum voxelization �� RT�� projection matrix�� ����ϴ� �Լ�
 Matrix4d compute_projection_matrices(int cam_num)
 {
 	Matrix3Xd camRT(3, 4);
@@ -3394,8 +2902,3 @@ Matrix4d compute_projection_matrices(int cam_num)
 	return camP;
 }
 
-//template<typename T>
-//void change_sequence(map<int, T> query_map) {
-//
-//
-//}
