@@ -874,13 +874,6 @@ void load_file_name_mode4(
 	if (referenceView == 220 && data_mode >= S01_H1) temp_num = referenceView + furthest_index;
 	else temp_num = total_num_cameras;
 
-	//for (int i = 0; i < temp_num; i++) {
-	//	vector<string> temp_vec;
-	//	temp_vec.resize(total_num_frames);
-	//	color_names.push_back(temp_vec);
-	//	depth_names.push_back(temp_vec);
-	//}
-
 	vector<string> temp_vec;
 	temp_vec.resize(total_num_frames);
 	color_names.resize(temp_num, temp_vec);

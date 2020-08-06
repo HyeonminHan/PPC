@@ -636,13 +636,9 @@ void get_color_and_depth_imgs(
 				depth_img = imread(path + "/RGB/dep/" + depth_names[camera][frame], IMREAD_ANYDEPTH);
 			}
 
-			//imgs[camera] = color_img;
-			//imgs2[camera] = depth_img;
-
 			cvtColor(color_img, color_img, CV_BGR2YUV);
 			imgs.push_back(color_img);
 			imgs2.push_back(depth_img);
-
 		}
 	}
 	else {
@@ -795,7 +791,7 @@ void view_PC(PointCloud<PointXYZRGB>::Ptr pointcloud)
 	viewer.setSize(1280, 1000);
 	viewer.createViewPort(0.0, 0.0, 1.0, 1.0, v1);
 	viewer.addCoordinateSystem(5.0);
-
+	
 	PointCloudColorHandlerRGBField<pcl::PointXYZRGB > rgb_handler(pointcloud);
 	viewer.addPointCloud(pointcloud, rgb_handler, "result", v1);
 	while (!viewer.wasStopped()) viewer.spinOnce();

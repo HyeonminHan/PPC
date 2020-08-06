@@ -331,43 +331,10 @@ public:
 
 			}
 		}
-		if (color[2] - v + 7 > 16)
+		//if (color[2] - v + 7 > 16)
 		VU[idx] = uchar((color[2] - v + 7) << 4) + uchar(color[1] - u + 7);
 		Y[idx] = color[0];
 	}
-
-	//void SetColor2(Vec3b color, int idx)
-	//{
-	//	int firstCamNum = 0;
-	//	for (int i = 0; i < total_num_cameras; i++) {
-	//		if (!CheckOcclusion(i)) {
-	//			firstCamNum = i;
-	//			break;
-	//		}
-	//	}
-
-	//	char v = char(refV -127);
-	//	char u = char(refU -127);
-	//	
-	//	if (v > 7) v = (char)7;
-	//	if (u > 7) u = (char)7;
-	//	if (v < -8) v = (char)-8;
-	//	if (u < -8) u = (char)-8;
-
-	//	for (int i = firstCamNum + 1; i < idx; i++) {
-	//		if (!CheckOcclusion(i)) {
-	//			v += char(VU[i] >> 4);
-	//			u += char((VU[i] << 4) >> 4);
-	//		}
-	//	}
-
-	//	//cout << int(color[2]) << " " << int(v) << " " << int(color[2] - v) << endl;
-	//	//if(int(color[2] - v) > 7)
-
-
-	//	VU[idx] = ((color[2] - v) << 4) + uchar(color[1] - u);
-	//	Y[idx] = color[0];
-	//}
 
 
 	void SetColor(uchar v_, uchar u_, uchar y_, int idx)

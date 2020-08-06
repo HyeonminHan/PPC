@@ -42,7 +42,7 @@ int main()
 	version = 1.0;
 	data_mode = 5;
 	int ppc_mode = 3;
-	int mask_size = 3; // 3 -> 3x3 / 5 -> 5x5 / ... / 11 -> 11x11
+	int mask_size = 11; // 3 -> 3x3 / 5 -> 5x5 / ... / 11 -> 11x11
 	int voxel_div_num = 8192;
 	///////////////////
 
@@ -65,7 +65,7 @@ int main()
 #endif
 
 #ifdef TEST
-	vector<int> datas = { 10, 5, 4, 11 };
+	vector<int> datas = { 10 };
 	for (int data_i = 0; data_i < datas.size(); data_i++) {
 		data_mode = datas[data_i];
 #endif
@@ -101,24 +101,24 @@ int main()
 		Mat temp_8(_height, _width, CV_8UC3, Scalar::all(0));
 		Mat temp_16(_height, _width, CV_16UC3, Scalar::all(0));
 
-		switch (data_mode) {
-		case 0:
-			blank_c = temp_8;
-			blank_d = temp_8;
-			break;
+		//switch (data_mode) {
+		//case 0:
+		//	blank_c = temp_8;
+		//	blank_d = temp_8;
+		//	break;
 
-		case 1:
-		case 2:
-		case 3:
-			//case 4: case 5: case 6: case 7: case 8:
-			//case 9: case 10: case 11: case 12 :
-			blank_c = temp_8;
-			blank_d = temp_16;
-			break;
-		}
+		//case 1:
+		//case 2:
+		//case 3:
+		//	//case 4: case 5: case 6: case 7: case 8:
+		//	//case 9: case 10: case 11: case 12 :
+		//	blank_c = temp_8;
+		//	blank_d = temp_16;
+		//	break;
+		//}
 
-		vector<Mat> color_imgs(total_num_cameras, blank_c);
-		vector<Mat> depth_imgs(total_num_cameras, blank_d);
+		vector<Mat> color_imgs(total_num_cameras);
+		vector<Mat> depth_imgs(total_num_cameras);
 		Mat depth_value_img(_height, _width, CV_64F, -1);
 
 		int frame_num = 1;
@@ -128,7 +128,7 @@ int main()
 		ppc_vec.resize(max_ppc_size);
 
 #ifdef TEST
-		vector<int> voxel_div_nums = { 1024, 4096 };
+		vector<int> voxel_div_nums = {  4096 };
 		for (int voxel_i = 0; voxel_i < voxel_div_nums.size(); voxel_i++) {
 			voxel_div_num = voxel_div_nums[voxel_i];
 			for (ppc_mode = 3; ppc_mode <= 3; ppc_mode++) {
@@ -248,7 +248,6 @@ int main()
 					vector<float> min(3);
 					vector<float> max(3);
 					set<unsigned long long>::iterator voxel_iter_in_progress;
-					int making_ppc_progress = 0; //0 : initial progress, 1 : making, 2: end 
 					vector<float> Cube_size, cube_size;
 
 					//find min_max of 3D space
@@ -311,6 +310,7 @@ int main()
 #ifdef TEST
 						making_ppc_all_time += (t14 - t13) / CLOCKS_PER_SEC;
 						projection_time_per_view += (t8 - t7) / CLOCKS_PER_SEC;
+
 						//YUVdev 계산
 						clock_t t11 = clock();
 						calc_YUV_dev_global(cur_ppc_size, dev_pointnum, point_num_per_color, full_color_dev);
