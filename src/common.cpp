@@ -707,14 +707,12 @@ vector<PointCloud<PointXYZRGB>::Ptr> get_PC_of_every_camera(
 void get_color_and_depth_imgs(
 	int frame,
 	vector<int> camera_order,
+	int colorspace,
 	vector<vector<string>> color_names,
 	vector<vector<string>> depth_names,
 	vector<Mat>& color_imgs,
 	vector<Mat>& depth_imgs)
 {
-	//vector<Mat> imgs(total_num_cameras);
-	//vector<Mat> imgs2(total_num_cameras);
-
 	vector<Mat> imgs;
 	vector<Mat> imgs2;
 
@@ -736,13 +734,12 @@ void get_color_and_depth_imgs(
 				depth_img = imread(path + "/RGB/dep/" + depth_names[camera][frame], IMREAD_ANYDEPTH);
 			}
 
-			//imgs[camera] = color_img;
-			//imgs2[camera] = depth_img;
+			if(colorspace ==0)	cvtColor(color_img, color_img, CV_BGR2YUV);
+			else if(colorspace ==1)	cvtColor(color_img, color_img, CV_BGR2HSV);
 
 			imgs.push_back(color_img);
 			imgs2.push_back(depth_img);
 
-			cvtColor(color_img, color_img, CV_BGR2YUV);
 		}
 	}
 	else {
@@ -763,12 +760,11 @@ void get_color_and_depth_imgs(
 				depth_img = imread(path + "/RGB/dep/" + depth_names[camera][frame], IMREAD_ANYDEPTH);
 			}
 
-			//imgs[camera] = color_img;
-			//imgs2[camera] = depth_img;
+			if (colorspace == 0) cvtColor(color_img, color_img, CV_BGR2YUV);
+			else if (colorspace == 1) cvtColor(color_img, color_img, CV_BGR2HSV);
+
 			imgs.push_back(color_img);
 			imgs2.push_back(depth_img);
-
-			cvtColor(color_img, color_img, CV_BGR2YUV);
 
 		}
 	}
@@ -779,16 +775,19 @@ void get_color_and_depth_imgs(
 
 void get_color_and_depth_imgs(
 	int frame,
+	vector<int> camera_order,
+	int colorspace,
 	vector<string> color_names_,
 	vector<string> depth_names_,
 	vector<Mat>& color_imgs,
 	vector<Mat>& depth_imgs)
 {
-	vector<Mat> imgs(total_num_cameras);
-	vector<Mat> imgs2(total_num_cameras);
+	vector<Mat> imgs;
+	vector<Mat> imgs2;
 
-	for (int camera = 0; camera < total_num_cameras; camera++)
+	for (int i = 0; i < total_num_cameras; i++)
 	{
+		int camera = camera_order[i];
 		Mat color_img, depth_img;
 
 		switch (data_mode) {
@@ -806,8 +805,14 @@ void get_color_and_depth_imgs(
 			break;
 		}
 
-		imgs[camera] = color_img;
-		imgs2[camera] = depth_img;
+		if (colorspace == 1) {
+			cvtColor(color_img, color_img, CV_YUV2BGR);
+			cvtColor(color_img, color_img, CV_BGR2HSV);
+		}
+		else if (colorspace == 2) cvtColor(color_img, color_img, CV_YUV2BGR);
+
+		imgs.push_back(color_img);
+		imgs2.push_back(depth_img);
 	}
 
 	color_imgs = imgs;

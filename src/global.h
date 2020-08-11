@@ -326,7 +326,7 @@ public:
 
 			}
 		}
-		if (color[2] - v + 7 > 16)
+		//if (color[2] - v + 7 > 16)
 		VU[idx] = uchar((color[2] - v + 7) << 4) + uchar(color[1] - u + 7);
 		Y[idx] = color[0];
 	}

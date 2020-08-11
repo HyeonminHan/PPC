@@ -34,12 +34,15 @@ vector<PointCloud<PointXYZRGB>::Ptr> get_PC_of_every_camera(
 void get_color_and_depth_imgs(
 	int frame,
 	vector<int> camera_order,
+	int colorspace,
 	vector<vector<string>> color_names,
 	vector<vector<string>> depth_names,
 	vector<Mat> &color_imgs,
 	vector<Mat> &depth_imgs);
 void get_color_and_depth_imgs(
 	int frame,
+	vector<int> camera_order,
+	int colorspace,
 	vector<string> color_names_,
 	vector<string> depth_names_,
 	vector<Mat> &color_imgs,

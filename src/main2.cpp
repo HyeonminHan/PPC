@@ -41,10 +41,10 @@ int main()
 	////////////////////////////////////////////////////////////////////////////////
 
 	///////input///////
-	version = 2.1;
+	version = 1.0;
 	data_mode = 4;
-	int ppc_mode = 3;
-	mask_size = 11; // 3 -> 3x3 / 5 -> 5x5 / ... / 11 -> 11x11
+	int ppc_mode = 0;
+	mask_size = 5; // 3 -> 3x3 / 5 -> 5x5 / ... / 11 -> 11x11
 	int voxel_div_num = 8192;
 	///////////////////
 
@@ -67,41 +67,42 @@ int main()
 #endif
 
 #ifdef TEST
-	vector<int> datas = { 5, 10 };
+	vector<int> datas = { 1, 3, 5, 10 };
 	for (int data_i = 0; data_i < datas.size(); data_i++) {
 		data_mode = datas[data_i];
 #endif
+		int scanning_method = 1; //0 - raster , 1 - spiral
+
 		//set information of the data
 		set_parameters(data_mode);
 
 		//set view order
-		camera_order = make_camOrder(referenceView);
-		/*camera_order = { 221,
-			220,
-			222,
-			219,
-			218,
-			201,
-			239,
-			200,
-			240,
-			199,
-			241,
-			198,
-			242,
-			197,
-			243,
-			180,
-			260,
-			179,
-			261,
-			178,
-			262,
-			177,
-			263,
-			176,
-			264
-		};*/
+		//camera_order = make_camOrder(referenceView);
+
+		if (data_mode == 1) {
+			//fencing raster
+			if(scanning_method == 0)
+			camera_order = { 0,1,2,3,4,5,6,7,8,9 };
+			//fencing spiral
+			else if(scanning_method == 1)
+			camera_order = { 4,5,3,6,2,7,1,8,0,9 };
+		}
+		else if (data_mode == 3) {
+			//tech raster
+			if(scanning_method == 0)
+			camera_order = { 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
+			//tech spiral
+			else if (scanning_method == 1)
+			camera_order = { 5,6,10,9,8,4,0,1,2,3,7,11,15,14,13,12 };
+		}
+		else if (data_mode == 5 || data_mode == 10) {
+			//hotel, res raster
+			if (scanning_method == 0)
+			camera_order = { 176,177,178,179,180,197,198,199,200,201,218,219,220,221,222,239,240,241,242,243,260,261,262,263,264 };
+			//hotel, res spiral
+			else if (scanning_method == 1)
+			camera_order = { 220,221,242,241,240,219,198,199,200,201,222,243,264,263,262,261,260,239,218,197,176,177,178,179,180 };
+		}
 		//for (int i = 0; i < total_num_cameras; i++) cout << camera_order[i] << endl;
 
 		//load camera parameters of each view
@@ -169,22 +170,22 @@ int main()
 
 #ifdef TEST
 		for (colorspace = 0; colorspace <= 2; colorspace++) {
-			vector<int> color_thresholds = { 0, 7, 14 };
+			vector<int> color_thresholds = { 0, 7 };
 			for (int c_th_i = 0; c_th_i < color_thresholds.size(); c_th_i++) {
 				int color_threshold = color_thresholds[c_th_i];
-				for (ppc_mode = 0; ppc_mode <= 0; ppc_mode++) {
-					if (ppc_mode == 2) continue;
+				for (int d_th_i = 0; d_th_i <= 1; d_th_i++) {
+					if (color_threshold == 0 && d_th_i == 1) continue;
 
 					cout << " ============================= " << endl;
 					cout << "          version  " << version << endl;
 					cout << " ============================= " << endl;
 					cout << "          data_mode  " << data_mode << endl;
 					cout << " ============================= " << endl;
-					cout << "          ppc_mode  " << ppc_mode << endl;
-					cout << " ============================= " << endl;
 					cout << "         color_space  " << colorspace << endl;
 					cout << " ============================= " << endl;
-					cout << "      voxel_div_num  " << voxel_div_num << endl;
+					cout << "      color_threshold  " << color_threshold << endl;
+					cout << " ============================= " << endl;
+					cout << "      depth_threshold  " << d_th_i << endl;
 					cout << " ============================= " << endl;
 
 					ofstream fout_data;
@@ -221,8 +222,25 @@ int main()
 					else if (colorspace == 2) name_colorspace = "BGR";
 
 					string version_ = to_string(version).substr(0, 3);
-					string name_data = "output\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + name_colorspace + "_Cth" + to_string(color_threshold) + "_data.csv";
-					string name_dev = "output\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + name_colorspace + "_Cth" + to_string(color_threshold) + "_dev.csv";
+
+					string dataa = "output\\data";
+					string devv = "output\\dev";
+					const char* foler_name111 = dataa.c_str();// +name_mode;
+					const char* foler_name222 = devv.c_str();// +name_mode;
+
+					CreateDirectory(foler_name111, NULL);
+					CreateDirectory(foler_name222, NULL);
+
+					string folder_name_string11 = "output\\data\\" + name_mode;
+					string folder_name_string22 = "output\\dev\\" + name_mode;
+					const char* foler_name11 = folder_name_string11.c_str();// +name_mode;
+					const char* foler_name22 = folder_name_string22.c_str();// +name_mode;
+
+					CreateDirectory(foler_name11, NULL);
+					CreateDirectory(foler_name22, NULL);
+
+					string name_data = folder_name_string11 + "\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + name_colorspace + "_Cth" + to_string(color_threshold) + "_Dth" + to_string(d_th_i) + "_data.csv";
+					string name_dev = folder_name_string22 + "\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + name_colorspace + "_Cth" + to_string(color_threshold) + "_Dth" + to_string(d_th_i) + "_dev.csv";
 
 					fout_data.open(name_data);
 					fout_dev.open(name_dev);
@@ -244,8 +262,8 @@ int main()
 						fout_dev << frame << "\n";
 #endif
 						//get color images and depth images to make ppc
-						if (!data_mode || data_mode >= S01_H1) get_color_and_depth_imgs(frame, camera_order, color_names, depth_names, color_imgs, depth_imgs);
-						else get_color_and_depth_imgs(frame, color_names_, depth_names_, color_imgs, depth_imgs);
+						if (!data_mode || data_mode >= S01_H1) get_color_and_depth_imgs(frame, camera_order, colorspace, color_names, depth_names, color_imgs, depth_imgs);
+						else get_color_and_depth_imgs(frame, camera_order, colorspace, color_names_, depth_names_, color_imgs, depth_imgs);
 
 						cout << "get_color_and_depth_imgs done... " << endl << endl;
 
@@ -260,7 +278,7 @@ int main()
 						int increPPC_size = 0;
 						cout << "voxel_div_num : " << voxel_div_num << endl;
 						if (ppc_mode == 0) {
-							float depth_threshold;
+							float depth_threshold = d_th_i;
 							Plen_PC = make_incremental_Plen_PC(color_imgs, depth_imgs, colorspace, camera_order, voxel_div_num, depth_threshold, color_threshold);
 							cout << "Size of incremental PPC : " << Plen_PC.size() << endl << endl;
 
@@ -318,17 +336,26 @@ int main()
 							fout_dev << "color" << i + 1 << "," << point_num_per_color[i] << "\n";
 						fout_dev << "\n";
 
-						fout_dev << "Y dev" << "\n";
+						if(colorspace ==0 )fout_dev << "Y dev" << "\n";
+						else if(colorspace ==1 )fout_dev << "H dev" << "\n";
+						else if(colorspace ==2 )fout_dev << "B dev" << "\n";
+
 						for (int i = 0; i < total_num_cameras; i++)
 							fout_dev << "color" << i + 1 << "," << dev_pointnum[i][1] << "\n";
 						fout_dev << "\n";
 
-						fout_dev << "U dev" << "\n";
+						if (colorspace == 0)fout_dev << "U dev" << "\n";
+						else if (colorspace == 1)fout_dev << "S dev" << "\n";
+						else if (colorspace == 2)fout_dev << "G dev" << "\n";
+
 						for (int i = 0; i < total_num_cameras; i++)
 							fout_dev << "color" << i + 1 << "," << dev_pointnum[i][2] << "\n";
 						fout_dev << "\n";
 
-						fout_dev << "V dev" << "\n";
+						if (colorspace == 0)fout_dev << "V dev" << "\n";
+						else if (colorspace == 1)fout_dev << "V dev" << "\n";
+						else if (colorspace == 2)fout_dev << "R dev" << "\n";
+
 						for (int i = 0; i < total_num_cameras; i++)
 							fout_dev << "color" << i + 1 << "," << dev_pointnum[i][3] << "\n";
 						fout_dev << "\n";
@@ -362,185 +389,194 @@ int main()
 							//cout << " vec_ppc_temp.size()" << vec_ppc_temp.size() << endl;
 						}
 
-						for (proj_mode = 0; proj_mode <= 1; proj_mode++) {
-							if (proj_mode == 1) continue;
 
-							cout << "===============================" << endl;
-							cout << "          proj_mode : " << proj_mode << endl;
-							cout << "===============================" << endl;
-							Mat is_hole_temp(_height, _width, CV_8U, Scalar::all(1));
-							vector<Mat> projection_imgs(total_num_cameras, temp_8);
-							vector<Mat> filled_imgs(total_num_cameras, temp_8);
-							vector<Mat> is_hole_proj_imgs(total_num_cameras, is_hole_temp);
-							vector<Mat> is_hole_filled_imgs(total_num_cameras, is_hole_temp);
+						cout << "===============================" << endl;
+						cout << "          proj_mode : " << proj_mode << endl;
+						cout << "===============================" << endl;
+						Mat is_hole_temp(_height, _width, CV_8U, Scalar::all(1));
+						vector<Mat> projection_imgs(total_num_cameras, temp_8);
+						vector<Mat> filled_imgs(total_num_cameras, temp_8);
+						vector<Mat> is_hole_proj_imgs(total_num_cameras, is_hole_temp);
+						vector<Mat> is_hole_filled_imgs(total_num_cameras, is_hole_temp);
 
-							int nNeighbor = 4;
-							int window_size = 2;
+						int nNeighbor = 4;
+						int window_size = 2;
 
-							//execute projection of ppc to each view
-							clock_t t7 = clock();
-							vector<PointCloud<PointXYZRGB>::Ptr> pointclouds_(total_num_cameras);
-							vector<int> pointNum_Of_colorN(total_num_cameras, 0);
-							projection_PPC_with_hole_filling(Plen_PC, projection_imgs, filled_imgs, is_hole_proj_imgs, is_hole_filled_imgs, pointclouds_, nNeighbor, window_size);
+						//execute projection of ppc to each view
+						clock_t t7 = clock();
+						vector<PointCloud<PointXYZRGB>::Ptr> pointclouds_(total_num_cameras);
+						vector<int> pointNum_Of_colorN(total_num_cameras, 0);
+						projection_PPC_with_hole_filling(Plen_PC, projection_imgs, filled_imgs, is_hole_proj_imgs, is_hole_filled_imgs, pointclouds_, nNeighbor, window_size);
 
-							cout << "point size : " << pointclouds_[0]->points.size() << endl;
-							clock_t t8 = clock();
-							cout << "projection and hole filling time: " << float(t8 - t7) / CLOCKS_PER_SEC << endl << endl;
+						clock_t t8 = clock();
+						cout << "projection and hole filling time: " << float(t8 - t7) / CLOCKS_PER_SEC << endl << endl;
 
-							//calculate and print PSNR
-							vector<float> psnrs_p, psnrs_h;
-							vector<float> psnrs_p_1, psnrs_p_2, psnrs_p_3;
-							vector<float> psnrs_h_1, psnrs_h_2, psnrs_h_3;
-							vector<int> num_holes_p, num_holes_h;
+						//calculate and print PSNR
+						vector<float> psnrs_p, psnrs_h;
+						vector<float> psnrs_p_1, psnrs_p_2, psnrs_p_3;
+						vector<float> psnrs_h_1, psnrs_h_2, psnrs_h_3;
+						vector<int> num_holes_p, num_holes_h;
 
-							printPSNRWithoutBlackPixel_RGB(color_imgs, projection_imgs, is_hole_proj_imgs, psnrs_p_1, psnrs_p_2, psnrs_p_3, num_holes_p);
-							printPSNRWithBlackPixel_RGB(color_imgs, filled_imgs, is_hole_filled_imgs, psnrs_h_1, psnrs_h_2, psnrs_h_3, num_holes_h);
+						printPSNRWithoutBlackPixel_RGB(color_imgs, projection_imgs, is_hole_proj_imgs, psnrs_p_1, psnrs_p_2, psnrs_p_3, num_holes_p);
+						printPSNRWithBlackPixel_RGB(color_imgs, filled_imgs, is_hole_filled_imgs, psnrs_h_1, psnrs_h_2, psnrs_h_3, num_holes_h);
 
-							/*for (int i = 0; i < filled_imgs.size(); i++) {
-								imshow("filled_img", filled_imgs[i]);
+						/*for (int i = 0; i < filled_imgs.size(); i++) {
+							imshow("filled_img", filled_imgs[i]);
 
-								Mat viewImg;
-								cvtColor(filled_imgs[i], viewImg, CV_YUV2BGR);
+							Mat viewImg;
+							if (colorspace == 0) cvtColor(filled_imgs[i], viewImg, CV_YUV2BGR);
+							else if (colorspace == 1) cvtColor(filled_imgs[i], viewImg, CV_HSV2BGR);
+							else if (colorspace == 2) viewImg = filled_imgs[i].clone();
 
-								imshow("viewImg", viewImg);
-								waitKey(0);
-							}*/
+							imshow("viewImg", viewImg);
+							waitKey(0);
+						}*/
 #ifdef TEST
 
-							fout_data << "\n\n";
-							if (proj_mode == 0) fout_data << "projection" << "\n";
-							else if (proj_mode == 1) fout_data << "back_projection" << "\n";
-							fout_data << "time" << ",";
-							fout_data << float(t6 - t5) / CLOCKS_PER_SEC + float(t8 - t7) / CLOCKS_PER_SEC << ",\n\n";
+						fout_data << "\n\n";
+						if (proj_mode == 0) fout_data << "projection" << "\n";
+						else if (proj_mode == 1) fout_data << "back_projection" << "\n";
+						fout_data << "time" << ",";
+						fout_data << float(t6 - t5) / CLOCKS_PER_SEC + float(t8 - t7) / CLOCKS_PER_SEC << ",\n\n";
 
-							map<int, int> num_holes_p_map, num_holes_h_map;
-							map<int, float> psnrs_p_1_map, psnrs_p_2_map, psnrs_p_3_map, psnrs_h_1_map, psnrs_h_2_map, psnrs_h_3_map;
-							map<int, Mat> proj_imgs_map, filled_imgs_map;
-							for (int i = 0; i < total_num_cameras; i++) {
-								num_holes_p_map.insert(make_pair(camera_order[i], num_holes_p[i]));
-								num_holes_h_map.insert(make_pair(camera_order[i], num_holes_h[i]));
-								psnrs_p_1_map.insert(make_pair(camera_order[i], psnrs_p_1[i]));
-								psnrs_p_2_map.insert(make_pair(camera_order[i], psnrs_p_2[i]));
-								psnrs_p_3_map.insert(make_pair(camera_order[i], psnrs_p_3[i]));
-								psnrs_h_1_map.insert(make_pair(camera_order[i], psnrs_h_1[i]));
-								psnrs_h_2_map.insert(make_pair(camera_order[i], psnrs_h_2[i]));
-								psnrs_h_3_map.insert(make_pair(camera_order[i], psnrs_h_3[i]));
-								proj_imgs_map.insert(make_pair(camera_order[i], projection_imgs[i]));
-								filled_imgs_map.insert(make_pair(camera_order[i], filled_imgs[i]));
-							}
+						map<int, int> num_holes_p_map, num_holes_h_map;
+						map<int, float> psnrs_p_1_map, psnrs_p_2_map, psnrs_p_3_map, psnrs_h_1_map, psnrs_h_2_map, psnrs_h_3_map;
+						map<int, Mat> proj_imgs_map, filled_imgs_map;
+						for (int i = 0; i < total_num_cameras; i++) {
+							num_holes_p_map.insert(make_pair(camera_order[i], num_holes_p[i]));
+							num_holes_h_map.insert(make_pair(camera_order[i], num_holes_h[i]));
+							psnrs_p_1_map.insert(make_pair(camera_order[i], psnrs_p_1[i]));
+							psnrs_p_2_map.insert(make_pair(camera_order[i], psnrs_p_2[i]));
+							psnrs_p_3_map.insert(make_pair(camera_order[i], psnrs_p_3[i]));
+							psnrs_h_1_map.insert(make_pair(camera_order[i], psnrs_h_1[i]));
+							psnrs_h_2_map.insert(make_pair(camera_order[i], psnrs_h_2[i]));
+							psnrs_h_3_map.insert(make_pair(camera_order[i], psnrs_h_3[i]));
+							proj_imgs_map.insert(make_pair(camera_order[i], projection_imgs[i]));
+							filled_imgs_map.insert(make_pair(camera_order[i], filled_imgs[i]));
+						}
 
-							Mat proj_viewImg, filled_viewImg;
-							int count_it = 0;
+						Mat proj_viewImg, filled_viewImg;
+						int count_it = 0;
 
-							string folder_name_string = "output\\image\\" + name_mode +"_"+ name_colorspace +"_"+to_string(color_threshold);
-							const char* foler_name = folder_name_string.c_str();// +name_mode;
+						string imagee = "output\\image";
+						const char* foler_name1111 = imagee.c_str();
+						CreateDirectory(foler_name1111, NULL);
 
-							CreateDirectory(foler_name, NULL);
+						string folder_name_string1 = "output\\image\\" + name_mode;
+						string folder_name_string2 = "output\\image\\" + name_mode + "\\" + name_colorspace + "_" + to_string(color_threshold) + "_" + to_string(d_th_i);
+						const char* foler_name1 = folder_name_string1.c_str();// +name_mode;
+						const char* foler_name2 = folder_name_string2.c_str();// +name_mode;
 
-							for (map<int, Mat>::iterator it = proj_imgs_map.begin(); it != proj_imgs_map.end(); it++) {
-								cvtColor(it->second, proj_viewImg, CV_YUV2BGR);
-								imwrite("output\\image\\" + name_mode + "\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + to_string(voxel_div_num) + "_projmode" + to_string(proj_mode) + "_view" + to_string(count_it++) + "_proj.png", proj_viewImg);
-							}
-							count_it = 0;
-							for (map<int, Mat>::iterator it = filled_imgs_map.begin(); it != filled_imgs_map.end(); it++) {
-								cvtColor(it->second, filled_viewImg, CV_YUV2BGR);
-								imwrite("output\\image\\" + name_mode + "\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + to_string(voxel_div_num) + "_projmode" + to_string(proj_mode) + "_view" + to_string(count_it++) + "_filled.png", filled_viewImg);
-							}
+						CreateDirectory(foler_name1, NULL);
+						CreateDirectory(foler_name2, NULL);
 
-							/*for (map<int, Mat>::iterator it = filled_imgs_map.begin(); it != filled_imgs_map.end(); it++) {
-								imshow("filled_img", it->second);
+						for (map<int, Mat>::iterator it = proj_imgs_map.begin(); it != proj_imgs_map.end(); it++) {
+							if (colorspace == 0) cvtColor(it->second, proj_viewImg, CV_YUV2BGR);
+							else if (colorspace == 1) cvtColor(it->second, proj_viewImg, CV_HSV2BGR);
+							else if (colorspace == 2) proj_viewImg = it->second.clone();
+							imwrite(folder_name_string2 + "\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + to_string(voxel_div_num) + "_projmode" + to_string(proj_mode) + "_view" + to_string(count_it++) + "_proj.png", proj_viewImg);
+						}
+						count_it = 0;
+						for (map<int, Mat>::iterator it = filled_imgs_map.begin(); it != filled_imgs_map.end(); it++) {
+							if (colorspace == 0) cvtColor(it->second, filled_viewImg, CV_YUV2BGR);
+							else if (colorspace == 1) cvtColor(it->second, filled_viewImg, CV_HSV2BGR);
+							else if (colorspace == 2) filled_viewImg = it->second.clone();
+							imwrite(folder_name_string2 + "\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + to_string(voxel_div_num) + "_projmode" + to_string(proj_mode) + "_view" + to_string(count_it++) + "_filled.png", filled_viewImg);
+						}
 
-								Mat viewImg;
-								cvtColor(it->second, viewImg, CV_YUV2BGR);
+						/*for (map<int, Mat>::iterator it = filled_imgs_map.begin(); it != filled_imgs_map.end(); it++) {
+							imshow("filled_img", it->second);
 
-								imshow("viewImg", viewImg);
-								waitKey(0);
-							}*/
+							Mat viewImg;
+							cvtColor(it->second, viewImg, CV_YUV2BGR);
 
-							fout_data << "hole_num\n";
-							count_it = 0;
-							for (map<int, int>::iterator it = num_holes_p_map.begin(); it != num_holes_p_map.end(); it++) {
-								fout_data << "cam" << count_it++ << "," << it->second << "\n";
-							}
-							count_it = 0;
-							fout_data << "\nPSNR_without_hole_R\n";
-							for (map<int, float>::iterator it = psnrs_p_1_map.begin(); it != psnrs_p_1_map.end(); it++) {
-								fout_data << "cam" << count_it++ << "," << it->second << "\n";
-							}
-							count_it = 0;
-							fout_data << "\nPSNR_without_hole_G\n";
-							for (map<int, float>::iterator it = psnrs_p_2_map.begin(); it != psnrs_p_2_map.end(); it++) {
-								fout_data << "cam" << count_it++ << "," << it->second << "\n";
-							}
-							count_it = 0;
-							fout_data << "\nPSNR_without_hole_B\n";
-							for (map<int, float>::iterator it = psnrs_p_3_map.begin(); it != psnrs_p_3_map.end(); it++) {
-								fout_data << "cam" << count_it++ << "," << it->second << "\n";
-							}
-							count_it = 0;
-							fout_data << "\n";
+							imshow("viewImg", viewImg);
+							waitKey(0);
+						}*/
 
-							fout_data << "\nhole_num_after_holefilling\n";
-							for (map<int, int>::iterator it = num_holes_h_map.begin(); it != num_holes_h_map.end(); it++) {
-								fout_data << "cam" << count_it++ << "," << it->second << "\n";
-							}
-							count_it = 0;
-							fout_data << "\nPSNR_with_hole_R\n";
-							for (map<int, float>::iterator it = psnrs_h_1_map.begin(); it != psnrs_h_1_map.end(); it++) {
-								fout_data << "cam" << count_it++ << "," << it->second << "\n";
-							}
-							count_it = 0;
-							fout_data << "\nPSNR_with_hole_G\n";
-							for (map<int, float>::iterator it = psnrs_h_2_map.begin(); it != psnrs_h_2_map.end(); it++) {
-								fout_data << "cam" << count_it++ << "," << it->second << "\n";
-							}
-							count_it = 0;
-							fout_data << "\nPSNR_with_hole_B\n";
-							for (map<int, float>::iterator it = psnrs_h_3_map.begin(); it != psnrs_h_3_map.end(); it++) {
-								fout_data << "cam" << count_it++ << "," << it->second << "\n";
-							}
-							count_it = 0;
-							fout_data << "\n\n";
+						fout_data << "hole_num\n";
+						count_it = 0;
+						for (map<int, int>::iterator it = num_holes_p_map.begin(); it != num_holes_p_map.end(); it++) {
+							fout_data << "cam" << count_it++ << "," << it->second << "\n";
+						}
+						count_it = 0;
+						fout_data << "\nPSNR_without_hole_R\n";
+						for (map<int, float>::iterator it = psnrs_p_1_map.begin(); it != psnrs_p_1_map.end(); it++) {
+							fout_data << "cam" << count_it++ << "," << it->second << "\n";
+						}
+						count_it = 0;
+						fout_data << "\nPSNR_without_hole_G\n";
+						for (map<int, float>::iterator it = psnrs_p_2_map.begin(); it != psnrs_p_2_map.end(); it++) {
+							fout_data << "cam" << count_it++ << "," << it->second << "\n";
+						}
+						count_it = 0;
+						fout_data << "\nPSNR_without_hole_B\n";
+						for (map<int, float>::iterator it = psnrs_p_3_map.begin(); it != psnrs_p_3_map.end(); it++) {
+							fout_data << "cam" << count_it++ << "," << it->second << "\n";
+						}
+						count_it = 0;
+						fout_data << "\n";
 
-							////////////////////////////////////////////////////////////////////
+						fout_data << "\nhole_num_after_holefilling\n";
+						for (map<int, int>::iterator it = num_holes_h_map.begin(); it != num_holes_h_map.end(); it++) {
+							fout_data << "cam" << count_it++ << "," << it->second << "\n";
+						}
+						count_it = 0;
+						fout_data << "\nPSNR_with_hole_R\n";
+						for (map<int, float>::iterator it = psnrs_h_1_map.begin(); it != psnrs_h_1_map.end(); it++) {
+							fout_data << "cam" << count_it++ << "," << it->second << "\n";
+						}
+						count_it = 0;
+						fout_data << "\nPSNR_with_hole_G\n";
+						for (map<int, float>::iterator it = psnrs_h_2_map.begin(); it != psnrs_h_2_map.end(); it++) {
+							fout_data << "cam" << count_it++ << "," << it->second << "\n";
+						}
+						count_it = 0;
+						fout_data << "\nPSNR_with_hole_B\n";
+						for (map<int, float>::iterator it = psnrs_h_3_map.begin(); it != psnrs_h_3_map.end(); it++) {
+							fout_data << "cam" << count_it++ << "," << it->second << "\n";
+						}
+						count_it = 0;
+						fout_data << "\n\n";
 
-							/*for (int i = 0; i < total_num_cameras; i++)
-								fout_data << "cam" << i << "," << num_holes_p[i] << "\n";
+						////////////////////////////////////////////////////////////////////
 
-							fout_data << "\nPSNR_without_hole_R\n";
-							for (int i = 0; i < total_num_cameras; i++)
-								fout_data << "cam" << i << "," << psnrs_p_1[i] << "\n";
-							fout_data << "\nPSNR_without_hole_G\n";
-							for (int i = 0; i < total_num_cameras; i++)
-								fout_data << "cam" << i << "," << psnrs_p_2[i] << "\n";
-							fout_data << "\nPSNR_without_hole_B\n";
-							for (int i = 0; i < total_num_cameras; i++)
-								fout_data << "cam" << i << "," << psnrs_p_3[i] << "\n";
-							fout_data << "\n";
+						/*for (int i = 0; i < total_num_cameras; i++)
+							fout_data << "cam" << i << "," << num_holes_p[i] << "\n";
 
-							fout_data << "\nPSNR_with_hole_R\n";
-							for (int i = 0; i < total_num_cameras; i++)
-								fout_data << "cam" << i << "," << psnrs_h_1[i] << "\n";
-							fout_data << "\nPSNR_with_hole_G\n";
-							for (int i = 0; i < total_num_cameras; i++)
-								fout_data << "cam" << i << "," << psnrs_h_2[i] << "\n";
-							fout_data << "\nPSNR_with_hole_B\n";
-							for (int i = 0; i < total_num_cameras; i++)
-								fout_data << "cam" << i << "," << psnrs_h_3[i] << "\n";
-							fout_data << "\n\n";*/
+						fout_data << "\nPSNR_without_hole_R\n";
+						for (int i = 0; i < total_num_cameras; i++)
+							fout_data << "cam" << i << "," << psnrs_p_1[i] << "\n";
+						fout_data << "\nPSNR_without_hole_G\n";
+						for (int i = 0; i < total_num_cameras; i++)
+							fout_data << "cam" << i << "," << psnrs_p_2[i] << "\n";
+						fout_data << "\nPSNR_without_hole_B\n";
+						for (int i = 0; i < total_num_cameras; i++)
+							fout_data << "cam" << i << "," << psnrs_p_3[i] << "\n";
+						fout_data << "\n";
+
+						fout_data << "\nPSNR_with_hole_R\n";
+						for (int i = 0; i < total_num_cameras; i++)
+							fout_data << "cam" << i << "," << psnrs_h_1[i] << "\n";
+						fout_data << "\nPSNR_with_hole_G\n";
+						for (int i = 0; i < total_num_cameras; i++)
+							fout_data << "cam" << i << "," << psnrs_h_2[i] << "\n";
+						fout_data << "\nPSNR_with_hole_B\n";
+						for (int i = 0; i < total_num_cameras; i++)
+							fout_data << "cam" << i << "," << psnrs_h_3[i] << "\n";
+						fout_data << "\n\n";*/
 
 #endif
-						}
 
 						Plen_PC.clear();
 						color_imgs.clear();
 						depth_imgs.clear();
 					}
 #ifdef TEST
-					if (ppc_mode == 0) break;
 
 					fout_data.close();
 					fout_dev.close();
+
 				}
 			}
 		}
