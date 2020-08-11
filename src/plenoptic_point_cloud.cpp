@@ -928,7 +928,7 @@ vector<PPC*> make_modified_Batch_Plen_PC2(
 	extract_largeNunit_CubeSize(min, max, voxel_div_num, Cube_size, cube_size);
 
 	GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-	printf("extract_largeNunit_CubeSize Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
+	cout << "extract_largeNunit_CubeSize Memory Usage : " << (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024) << " MB" << endl;
 
 	GetProcessMemoryInfo(GetCurrentProcess(),
 		(PROCESS_MEMORY_COUNTERS*)&g_mc, sizeof(g_mc));
@@ -937,7 +937,7 @@ vector<PPC*> make_modified_Batch_Plen_PC2(
 	valid_cube_indices = find_valid_cube_indices(pointclouds, voxel_div_num, min, Cube_size, cube_size);
 
 	GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-	printf("find_valid_cube_indices before clear Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
+	cout << "find_valid_cube_indices Memory Usage : " << (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024) << " MB" << endl;
 
 	pointclouds.clear();
 	vector<PointCloud<PointXYZRGB>::Ptr>().swap(pointclouds);
@@ -945,7 +945,7 @@ vector<PPC*> make_modified_Batch_Plen_PC2(
 	Sleep(5000);
 
 	GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-	printf("find_valid_cube_indices after clear Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
+	cout << "find_valid_cube_indices after clear Memory Usage : " << (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024) << " MB" << endl;
 
 
 	/////////////////////////////////////////////
@@ -1056,7 +1056,7 @@ vector<PPC*> make_modified_Batch_Plen_PC2(
 	}
 
 	GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-	printf("make ppc before valid_cube_indices clear Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
+	cout << "make ppc before valid_cube_indices clear Memory Usage : " << (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024) << " MB" << endl;
 
 	valid_cube_indices.clear();
 	set<unsigned long long>().swap(valid_cube_indices);
@@ -1064,13 +1064,12 @@ vector<PPC*> make_modified_Batch_Plen_PC2(
 	Sleep(5000);
 
 	GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
-	printf("make ppc after valid_cube_indices clear Memory Usage : %u MB\n", (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024));
+	cout << "make ppc after valid_cube_indices clear Memory Usage : " << (pmc.PrivateUsage - g_mc.PrivateUsage) / (1024 * 1024) << " MB" << endl;
 
 
 	return ppc_vec;
 }
 
-//2020.07.27 by sung soo hwang
 void find_min_max_3D_space(
 	vector<PointCloud<PointXYZRGB>::Ptr> &pointclouds,
 	vector<Mat> color_imgs,
@@ -1456,7 +1455,6 @@ void projection_PPC_with_hole_filling_per_viewpoint(
 
 }
 
-//2020.07.27 by sung soo hwang
 void perform_projection(
 	int cam_num,
 	int cur_ppc_size,
@@ -1541,7 +1539,6 @@ void hole_filling_PPC(
 		holefilling_per_viewpoint(proj_imgs[num], filled_imgs[num], is_hole_filled_imgs[num], window_size);
 	}
 }
-
 
 Mat find_hole_PPC(Mat projection_img)
 {
@@ -1693,33 +1690,6 @@ void save_ppc(vector<PPC*> ppc, string filename) {
 	cout << "save pcc done..." << endl << endl;
 }
 
-void save_ppc_global(int cur_ppc_size, string filename) {
-
-	ofstream fout(filename, ios::binary);
-
-	for (int i = 0; i < cur_ppc_size; i++) {
-		float* geo = ppc_vec[i].GetGeometry();
-		fout.write((char*)&geo[0], sizeof(float));
-		fout.write((char*)&geo[1], sizeof(float));
-		fout.write((char*)&geo[2], sizeof(float));
-
-		vector<bool> occlusions = ppc_vec[i].GetOcclusion();
-		for (int cam = 0; cam < total_num_cameras; cam++) {
-			Vec3b vuy = ppc_vec[i].GetColor(cam);
-			fout.write((char*)&vuy[0], sizeof(uchar));
-			fout.write((char*)&vuy[1], sizeof(uchar));
-			fout.write((char*)&vuy[2], sizeof(uchar));
-
-			fout.write((char*)&occlusions[i], sizeof(uchar));
-		}
-
-
-
-	}
-
-
-}
-
 vector<PPC*> load_ppc(string filename) {
 	vector<PPC*> vec_ppc;
 	ifstream fin(filename, ios::binary);
@@ -1800,9 +1770,9 @@ vector<PPC*> load_ppc(string filename) {
 	return vec_ppc;
 }
 
-void calc_YUV_dev_global(int cur_ppc_size, vector<vector<float>>& dev_pointnum, vector<int>& point_num_per_color, vector<int>& full_color_dev)
+void calc_YUV_stddev_global(int cur_ppc_size, vector<vector<float>>& dev_pointnum, vector<int>& point_num_per_color, vector<int>& full_color_dev)
 {
-	cout << "calc_YUV_dev_global method is proceeding ..." << endl;
+	cout << "calc_YUV_stddev_global method is proceeding ..." << endl;
 	float avr_y = 0, avr_u = 0, avr_v = 0;
 	float avr_y_2 = 0, avr_u_2 = 0, avr_v_2 = 0;
 	int cam_number = 0;

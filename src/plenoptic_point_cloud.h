@@ -11,43 +11,6 @@ extern double version;
 extern vector<int> camera_order;
 extern vector<PPC_v1> ppc_vec;
 
-//2020.07.27 by sung soo hwang
-void find_min_max_3D_space(
-	vector<PointCloud<PointXYZRGB>::Ptr>& pointclouds,
-	vector<Mat> color_imgs,
-	vector<Mat> depth_imgs,
-	vector<float>& min,
-	vector<float>& max);
-
-void find_valid_voxels(
-	vector<PointCloud<PointXYZRGB>::Ptr>& pointclouds,
-	vector<float> min,
-	vector<float> max,
-	int voxel_div_num,
-	vector<float>& space_size,
-	vector<float>& voxel_size,
-	set<unsigned long long>& valid_cube_indices);
-
-void make_PPC_modified_batch(
-	int iteration,
-	int max_ppc_size,
-	vector<float> min,
-	int voxel_div_num,
-	vector<Mat> color_imgs,
-	vector<Mat> depth_imgs,
-	vector<float>& space_size,
-	vector<float>& voxel_size,
-	set<unsigned long long>& valid_cube_indices,
-	bool& end_ppc_generation,
-	int &cur_ppc_size);
-
-void perform_projection(
-	int cam_num,
-	int cur_ppc_size,
-	Mat& proj_img,
-	Mat& is_hole_proj_img,
-	Mat& depth_value_img);
-
 vector<PPC*> make_incremental_Plen_PC(
 	vector<Mat> color_imgs,
 	vector<Mat> depth_imgs,
@@ -93,6 +56,36 @@ vector<PPC*> make_modified_Batch_Plen_PC2(
 	vector<float>& Cube_size,
 	vector<float>& cube_size);
 
+void find_min_max_3D_space(
+	vector<PointCloud<PointXYZRGB>::Ptr>& pointclouds,
+	vector<Mat> color_imgs,
+	vector<Mat> depth_imgs,
+	vector<float>& min,
+	vector<float>& max);
+
+void find_valid_voxels(
+	vector<PointCloud<PointXYZRGB>::Ptr>& pointclouds,
+	vector<float> min,
+	vector<float> max,
+	int voxel_div_num,
+	vector<float>& space_size,
+	vector<float>& voxel_size,
+	set<unsigned long long>& valid_cube_indices);
+
+void make_PPC_modified_batch(
+	int iteration,
+	int max_ppc_size,
+	vector<float> min,
+	int voxel_div_num,
+	vector<Mat> color_imgs,
+	vector<Mat> depth_imgs,
+	vector<float>& space_size,
+	vector<float>& voxel_size,
+	set<unsigned long long>& valid_cube_indices,
+	bool& end_ppc_generation,
+	int& cur_ppc_size);
+
+
 vector<PointCloud<PointXYZRGB>::Ptr> make_all_PC(
 	vector<Mat> color_imgs,
 	vector<Mat> depth_imgs);
@@ -136,6 +129,13 @@ void projection_PPC_with_hole_filling_per_viewpoint(
 	int nNeighbor,
 	int window_size);
 
+void perform_projection(
+	int cam_num,
+	int cur_ppc_size,
+	Mat& proj_img,
+	Mat& is_hole_proj_img,
+	Mat& depth_value_img);
+
 void hole_filling_PPC(vector<Mat> proj_imgs, 
 	vector<Mat> &filled_imgs, 
 	vector<Mat>& is_hole_filled_imgs, 
@@ -153,7 +153,7 @@ void save_ppc(vector<PPC*> ppc,
 
 vector<PPC*> load_ppc(string filename);
 
-void calc_YUV_dev_global(int cur_ppc_size, 
+void calc_YUV_stddev_global(int cur_ppc_size, 
 	vector<vector<float>>& dev_pointnum, 
 	vector<int>& point_num_per_color, 
 	vector<int>& full_color_dev);
