@@ -75,7 +75,6 @@ private:
 	float* geometry;
 
 public:
-
 	//v2
 	virtual bool CheckOcclusion(int idx) { return false; }
 	virtual Vec3b GetColor(int idx) { return { 0, 0, 0 }; }
@@ -119,10 +118,6 @@ public:
 		U = vector<uchar>(total_num_cameras);
 		V = vector<uchar>(total_num_cameras);
 		occlusion = vector<bool>(total_num_cameras, false);
-	}
-
-	~PPC_v1() {
-
 	}
 
 	bool CheckOcclusion(int idx)
@@ -178,7 +173,6 @@ public:
 		geometry[2] = geo[2];
 	}
 
-	// color�� yuv
 	void SetColor(Vec3b color, int idx)
 	{
 		Y[idx] = color[0];

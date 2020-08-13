@@ -3,8 +3,6 @@
 #include "common.h"
 #include "plenoptic_point_cloud.h"
 
-
-
 int data_mode, _width, _height, total_num_cameras, total_num_frames;
 double MinZ, MaxZ, scaleZ;
 vector<Vector2d> tech_minmaxZ;
@@ -39,18 +37,18 @@ int main()
 	int ppc_mode, view_num, voxel_div_num, colorspace;
 
 	//fixed variable
-	const int referenceView = 220, 
+	const int referenceView = 220;
 	version = 1.0;
 	ppc_mode = 3;
-	colorspace = 0; // 0: YUV, 1: HSV, 2: BGR
+	colorspace = 0;
 
 	//unfixed variable
-	view_num = 11; // 3 -> 3x3 / 5 -> 5x5 / ... / 11 -> 11x11
-
-	const int furthest_index = (view_num + 1) / 2 * 22;
-
+	view_num = 3; 
 	int max_ppc_size = 100000000;
+
+	
 	ppc_vec.resize(max_ppc_size);
+	const int furthest_index = (view_num + 1) / 2 * 22;
 
 #ifndef TEST
 	data_mode = 5;
@@ -69,7 +67,7 @@ int main()
 #endif
 
 #ifdef TEST
-	vector<int> datas = { 5, 6, 7, 8, 9, 10, 11, 12 };
+	vector<int> datas = { 5, 10 };
 	for (int data_i = 0; data_i < datas.size(); data_i++) {
 		data_mode = datas[data_i];
 #endif
@@ -111,12 +109,13 @@ int main()
 
 		int frame_num = 1;
 
-
 #ifdef TEST
-		vector<int> voxel_div_nums = { 4096, 8192 };
+		vector<int> voxel_div_nums = { 1024, 8192 };
 		for (int voxel_i = 0; voxel_i < voxel_div_nums.size(); voxel_i++) {
 			voxel_div_num = voxel_div_nums[voxel_i];
 
+			cout << " ============================= " << endl;
+			cout << "          view_num  " << view_num << endl;
 			cout << " ============================= " << endl;
 			cout << "          data_mode  " << data_mode << endl;
 			cout << " ============================= " << endl;
@@ -256,6 +255,7 @@ int main()
 #endif
 				clock_t t5 = clock();
 				while (end_ppc_generation == false) {
+
 					clock_t t13 = clock();
 					make_PPC_modified_batch(iteration, max_ppc_size, min, voxel_div_num, color_imgs, depth_imgs, Cube_size, cube_size, valid_cube_indices, end_ppc_generation, cur_ppc_size);
 					clock_t t14 = clock();
@@ -298,6 +298,7 @@ int main()
 				printPSNRWithoutBlackPixel_RGB(color_imgs, projection_imgs, is_hole_proj_imgs, psnrs_p_1, psnrs_p_2, psnrs_p_3, num_holes_p);
 				printPSNRWithBlackPixel_RGB(color_imgs, filled_imgs, is_hole_filled_imgs, psnrs_h_1, psnrs_h_2, psnrs_h_3, num_holes_h);
 
+#ifdef TEST			
 				//save images
 				string folder_name_string = "output\\image\\" + name_mode;
 				const char* foler_name = folder_name_string.c_str();
@@ -319,7 +320,6 @@ int main()
 				}
 				clock_t t10 = clock();
 				cout << "save image time: " << float(t10 - t9) / CLOCKS_PER_SEC << endl << endl;
-#ifdef TEST			
 				for (int cam = 0; cam < total_num_cameras; cam++) {
 					for (int i = 0; i < 4; i++) {
 						if (point_num_per_color[cam] != 0) dev_pointnum[cam][i] = dev_pointnum[cam][i] / (float)point_num_per_color[cam];
@@ -450,9 +450,9 @@ int main()
 				map<int, float>().swap(psnrs_h_1_map);
 				map<int, float>().swap(psnrs_h_2_map);
 				map<int, float>().swap(psnrs_h_3_map);
-#endif
 			}
 		}
+#endif
 	}
 	return 0;
 

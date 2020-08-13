@@ -517,8 +517,6 @@ Mat readYUV(
 			}
 		}
 
-		// 3�� ¥�� Mat array�� �� ä�� Mat �Ҵ�.
-		// u, v ä���� resize ����.
 		img_yuv[0] = img_y;
 		resize(img_u, img_yuv[1], Size(_width, _height));
 		resize(img_v, img_yuv[2], Size(_width, _height));

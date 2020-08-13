@@ -1122,7 +1122,7 @@ void make_PPC_modified_batch(
 	int cnt_first = 0;
 
 	int ppc_idx = 0;
-	double depth_threshold = sqrt((voxel_size[0] * voxel_size[0]) + (voxel_size[1] * voxel_size[1]) + (voxel_size[2] * voxel_size[2]));// *0.5;
+	double depth_threshold = sqrt((voxel_size[0] * voxel_size[0]) + (voxel_size[1] * voxel_size[1]) + (voxel_size[2] * voxel_size[2]));
 
 	set<unsigned long long>::iterator cube_index_iter;
 
@@ -1136,14 +1136,15 @@ void make_PPC_modified_batch(
 			cur_ppc_size = ppc_idx;
 			break;
 		}
+
 		if (cube_index_iter == end_iter) {
 			cur_ppc_size = ppc_idx;
 			end_ppc_generation = true;
 			break;
 		}
 
-		if (ppc_idx % 10000000 == 0)
-			cout << ppc_idx << "th ppc is being made..." << endl;
+		if (ppc_idx % 10000000 == 0) cout << ppc_idx << "th ppc is being made..." << endl;
+
 		unsigned long long cube_index = *cube_index_iter;
 		x_idx = int(cube_index / (voxel_div_num_ * voxel_div_num_));
 		y_idx = int((cube_index % (voxel_div_num_ * voxel_div_num_)) / voxel_div_num);
@@ -1157,6 +1158,7 @@ void make_PPC_modified_batch(
 		cnt++;
 
 		for (int cam = 0; cam < total_num_cameras; cam++) {
+
 			w = projection_XYZ_2_UV(
 				m_CalibParams[cam].m_ProjMatrix,
 				(double)X,
@@ -1167,7 +1169,6 @@ void make_PPC_modified_batch(
 
 			//복셀의 중점과 image plane과의 거리값 계산
 			dist_point2camera = find_point_dist(w, cam);
-
 			if ((u < 0) || (v < 0) || (u > _width - 1) || (v > _height - 1)) continue;
 
 			//원본거리값 계산
@@ -1196,24 +1197,23 @@ void make_PPC_modified_batch(
 			if (abs(dist_origin - dist_point2camera) < depth_threshold) {
 				if (is_first_color) {
 					float geo[3] = { X, Y, Z };
-
-					if (version == 1.0) {
-						if (iteration == 0) {
-							ppc_vec[ppc_idx] = PPC_v1();
-						}
-						else {
-							ppc_vec[ppc_idx].SetZero();
-						}
-						ppc_vec[ppc_idx].SetGeometry(geo);
-						ppc_vec[ppc_idx].SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
+					if (iteration == 0) {
+						ppc_vec[ppc_idx] = PPC_v1();
 					}
+					else {
+						ppc_vec[ppc_idx].SetZero();
+					}
+					ppc_vec[ppc_idx].SetGeometry(geo);
+					ppc_vec[ppc_idx].SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
 					is_first_color = false;
 				}
 				else {
 					ppc_vec[ppc_idx].SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
 				}
 			}
+
 		}
+
 		if (!is_first_color) {
 			ppc_idx++;
 		}
