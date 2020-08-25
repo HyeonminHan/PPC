@@ -157,3 +157,5 @@ void calc_YUV_stddev_global(int cur_ppc_size,
 	vector<vector<float>>& dev_pointnum, 
 	vector<int>& point_num_per_color, 
 	vector<int>& full_color_dev);
+
+void color_imaging(PPC p);

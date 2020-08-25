@@ -1845,7 +1845,6 @@ void calc_YUV_stddev_global(int cur_ppc_size, vector<vector<float>>& dev_pointnu
 
 		avr_dev = (dev_y + dev_u + dev_v) / 3.0;
 
-
 		dev_pointnum[cam_number - 1][0] += avr_dev;
 		dev_pointnum[cam_number - 1][1] += dev_y;
 		dev_pointnum[cam_number - 1][2] += dev_u;
@@ -1853,4 +1852,31 @@ void calc_YUV_stddev_global(int cur_ppc_size, vector<vector<float>>& dev_pointnu
 	}
 
 	cout << "calc_YUV_dev method is done ..." << endl << endl;
+}
+
+void color_imaging(PPC p) {
+
+	Mat colors(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC3);
+	Mat occlusions(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8U);
+
+	int num = 0;
+	for (int i = 0; i < sqrt(total_num_cameras); i++) {
+		for (int j = 0; j < sqrt(total_num_cameras); j++) {
+
+			num = i * sqrt(total_num_cameras) + j;
+
+			bool is_occ = p.CheckOcclusion(num);
+			if(is_occ) occlusions.at<uchar>(i, j) = 0;
+			else occlusions.at<uchar>(i, j) = 255;
+
+			Vec3b color = p.GetColor(num);
+			colors.at<Vec3b>(i, j) = color;
+
+
+		}
+	}
+
+	imshow("colors", colors);
+	imshow("occlusions", occlusions);
+	waitKey(0);
 }

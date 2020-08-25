@@ -1,3 +1,4 @@
+//color_imaging
 #include "global.h"
 #include "set_environment.h"
 #include "common.h"
@@ -294,6 +295,14 @@ int main()
 				}
 				clock_t t6 = clock();
 				cout << "make ppc and projection final time : " << (t6 - t1) / CLOCKS_PER_SEC << endl << endl;
+
+				for(int i = 0; i< ppc_vec.size(); i++)
+					color_imaging(ppc_vec[i]);
+
+
+
+
+
 
 				printPSNRWithoutBlackPixel_RGB(color_imgs, projection_imgs, is_hole_proj_imgs, psnrs_p_1, psnrs_p_2, psnrs_p_3, num_holes_p);
 				printPSNRWithBlackPixel_RGB(color_imgs, filled_imgs, is_hole_filled_imgs, psnrs_h_1, psnrs_h_2, psnrs_h_3, num_holes_h);

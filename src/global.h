@@ -2,7 +2,7 @@
 #define _SECURE_SCL 0 
 #define BOOST_TYPEOF_EMULATION
 
-#define TEST
+//#define TEST
 
 #define MSR3DVideo_Ballet 0
 #define Poznan_Fencing 1
