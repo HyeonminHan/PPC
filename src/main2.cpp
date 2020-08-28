@@ -263,7 +263,11 @@ int main()
 
 					total_ppc_size += cur_ppc_size;
 					iteration++;
-					//perform_projection
+
+					//load_ppc_v1("output\\ppc_binary.bin", total_ppc_size);
+					//cout << "total_ppc_size : " << total_ppc_size << endl;
+					//cur_ppc_size = total_ppc_size;
+					//end_ppc_generation = true;
 
 					clock_t t7, t8;
 					for (int cam = 0; cam < total_num_cameras; cam++) {
@@ -294,9 +298,11 @@ int main()
 				}
 				clock_t t6 = clock();
 				cout << "make ppc and projection final time : " << (t6 - t1) / CLOCKS_PER_SEC << endl << endl;
-
+				cout << "total_ppc_size : " << total_ppc_size << endl;
 				printPSNRWithoutBlackPixel_RGB(color_imgs, projection_imgs, is_hole_proj_imgs, psnrs_p_1, psnrs_p_2, psnrs_p_3, num_holes_p);
 				printPSNRWithBlackPixel_RGB(color_imgs, filled_imgs, is_hole_filled_imgs, psnrs_h_1, psnrs_h_2, psnrs_h_3, num_holes_h);
+
+				//save_ppc_v1(total_ppc_size, "output\\ppc_binary1.bin");
 
 #ifdef TEST			
 				//save images

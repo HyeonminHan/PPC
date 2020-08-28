@@ -1633,7 +1633,47 @@ void save_ppc(vector<PPC*> ppc, string filename) {
 		fout.write((char*)&geo[1], sizeof(float));
 		fout.write((char*)&geo[2], sizeof(float));
 
-		if (version == 2.1) {
+		if (version == 1.0) {
+			vector<uchar> V = (*vit)->GetV();
+			vector<uchar> U = (*vit)->GetU();
+			vector<uchar> Y = (*vit)->GetY();
+			vector<bool> occ = (*vit)->GetOcclusion();
+
+			for (int i = 0; i < total_num_cameras; i++) {
+				fout.write((char*)&V[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fout.write((char*)&U[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fout.write((char*)&Y[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				char* temp;
+				if (i % 8 == 0) {
+					temp = new char;
+					*temp = occ[i];
+				}
+				else if (i % 8 == 7) {
+					*temp <<= 1;
+					*temp |= occ[i];
+					fout.write((char*)temp, sizeof(char));
+					delete temp;
+				}
+				else if (i == total_num_cameras - 1) {
+					*temp <<= 1;
+					*temp |= occ[i];
+					*temp <<= 8 - (total_num_cameras % 8);
+					fout.write((char*)temp, sizeof(char));
+					delete temp;
+				}
+				else {
+					*temp <<= 1;
+					*temp |= occ[i];
+				}
+			}
+		}
+		else if (version == 2.1) {
 			uchar refV = (*vit)->GetrefV();
 			uchar refU = (*vit)->GetrefU();
 			fout.write((char*)&refV, sizeof(uchar));
@@ -1650,8 +1690,8 @@ void save_ppc(vector<PPC*> ppc, string filename) {
 			}
 		}
 		else if (version == 2.2) {
-			uchar avrV = (*vit)->GetV();
-			uchar avrU = (*vit)->GetU();
+			uchar avrV = (*vit)->GetavrV();
+			uchar avrU = (*vit)->GetavrU();
 			fout.write((char*)&avrV, sizeof(uchar));
 			fout.write((char*)&avrU, sizeof(uchar));
 
@@ -1666,6 +1706,63 @@ void save_ppc(vector<PPC*> ppc, string filename) {
 					*temp = occ[i];
 				}
 				else if (i % 8 == 7 ) {
+					*temp <<= 1;
+					*temp |= occ[i];
+					fout.write((char*)temp, sizeof(char));
+					delete temp;
+				}
+				else if (i == total_num_cameras - 1) {
+					*temp <<= 1;
+					*temp |= occ[i];
+					*temp <<= 8 - (total_num_cameras % 8);
+					fout.write((char*)temp, sizeof(char));
+					delete temp;
+				}
+				else {
+					*temp <<= 1;
+					*temp |= occ[i];
+				}
+			}
+		}
+	}
+
+	fout.close();
+	cout << "save pcc done..." << endl << endl;
+}
+
+void save_ppc_v1(int total_ppc_size, string filename) {
+
+	ofstream fout(filename, ios::binary);
+
+	for (int i = 0; i < total_ppc_size; i++) {
+		float* geo = new float(3);
+		geo = ppc_vec[i].GetGeometry();
+		fout.write((char*)&geo[0], sizeof(float));
+		fout.write((char*)&geo[1], sizeof(float));
+		fout.write((char*)&geo[2], sizeof(float));
+
+		if (version == 1.0) {
+			vector<uchar> V = ppc_vec[i].GetV();
+			vector<uchar> U = ppc_vec[i].GetU();
+			vector<uchar> Y = ppc_vec[i].GetY();
+			vector<bool> occ = ppc_vec[i].GetOcclusion();
+
+			for (int i = 0; i < total_num_cameras; i++) {
+				fout.write((char*)&V[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fout.write((char*)&U[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fout.write((char*)&Y[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				char* temp;
+				if (i % 8 == 0) {
+					temp = new char;
+					*temp = occ[i];
+				}
+				else if (i % 8 == 7) {
 					*temp <<= 1;
 					*temp |= occ[i];
 					fout.write((char*)temp, sizeof(char));
@@ -1705,7 +1802,52 @@ vector<PPC*> load_ppc(string filename) {
 		fin.read((char*)(&geo[2]), sizeof(float));
 		pc->SetGeometry(geo);
 
-		if (version == 2.1) {
+		if (version == 1.0) {
+
+			vector<uchar> V(total_num_cameras), U(total_num_cameras), Y(total_num_cameras);
+			vector<bool> occlusion(total_num_cameras);
+
+			for (int i = 0; i < total_num_cameras; i++) {
+				fin.read((char*)&V[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fin.read((char*)&U[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fin.read((char*)&Y[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				char* temp;
+				if (i % 8 == 0) {
+					temp = new char;
+					fin.read((char*)temp, sizeof(char));
+					unsigned char t = *temp & 128; //1000 0000
+					if (t == 128) {
+						occlusion[i] = true;
+					}
+					else occlusion[i] = false;
+					*temp <<= 1;
+				}
+				else if (i % 8 == 7 || i == total_num_frames - 1) {
+					unsigned char t = *temp & 128; //1000 0000
+					if (t == 128) {
+						occlusion[i] = true;
+					}
+					else occlusion[i] = false;
+					delete temp;
+				}
+				else {
+					unsigned char t = *temp & 128; //1000 0000
+					if (t == 128) {
+						occlusion[i] = true;
+					}
+					else occlusion[i] = false;
+					*temp <<= 1;
+				}
+			}
+			pc->SetColor(V, U, Y, occlusion);
+		}
+		else if (version == 2.1) {
 			uchar refV, refU;
 			fin.read((char*)(&refV), sizeof(uchar));
 			fin.read((char*)(&refU), sizeof(uchar));
@@ -1768,6 +1910,70 @@ vector<PPC*> load_ppc(string filename) {
 	fin.close();
 	cout << "load pcc done..." << endl << endl;
 	return vec_ppc;
+}
+
+void load_ppc_v1(string filename, int& total_ppc_size) {
+	ifstream fin(filename, ios::binary);
+
+	int cnt = 0;
+	while (!fin.eof()) {
+		if (version == 1.0) {
+			ppc_vec[cnt] = PPC_v1();
+
+			float* geo = (float*)malloc(3 * sizeof(float));
+			fin.read((char*)(&geo[0]), sizeof(float));
+			fin.read((char*)(&geo[1]), sizeof(float));
+			fin.read((char*)(&geo[2]), sizeof(float));
+			ppc_vec[cnt].SetGeometry(geo);
+
+			vector<uchar> V(total_num_cameras), U(total_num_cameras), Y(total_num_cameras);
+			vector<bool> occlusion(total_num_cameras);
+
+			for (int i = 0; i < total_num_cameras; i++) {
+				fin.read((char*)&V[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fin.read((char*)&U[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fin.read((char*)&Y[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				char* temp;
+				if (i % 8 == 0) {
+					temp = new char;
+					fin.read((char*)temp, sizeof(char));
+					unsigned char t = *temp & 128; //1000 0000
+					if (t == 128) {
+						occlusion[i] = true;
+					}
+					else occlusion[i] = false;
+					*temp <<= 1;
+				}
+				else if (i % 8 == 7 || i == total_num_cameras - 1) {
+					unsigned char t = *temp & 128; //1000 0000
+					if (t == 128) {
+						occlusion[i] = true;
+					}
+					else occlusion[i] = false;
+					delete temp;
+				}
+				else {
+					unsigned char t = *temp & 128; //1000 0000
+					if (t == 128) {
+						occlusion[i] = true;
+					}
+					else occlusion[i] = false;
+					*temp <<= 1;
+				}
+			}
+			ppc_vec[cnt].SetColor(V, U, Y, occlusion);
+			cnt++;
+		}
+	}
+	total_ppc_size = cnt;
+	fin.close();
+	cout << "load pcc done..." << endl << endl;
 }
 
 void calc_YUV_stddev_global(int cur_ppc_size, vector<vector<float>>& dev_pointnum, vector<int>& point_num_per_color, vector<int>& full_color_dev)

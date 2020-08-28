@@ -151,7 +151,11 @@ void holefilling_per_viewpoint(Mat colorimg,
 void save_ppc(vector<PPC*> ppc, 
 	string filename);
 
+void save_ppc_v1(int total_ppc_size, string filename);
+
 vector<PPC*> load_ppc(string filename);
+
+void load_ppc_v1(string filename, int& total_ppc_size);
 
 void calc_YUV_stddev_global(int cur_ppc_size, 
 	vector<vector<float>>& dev_pointnum, 
