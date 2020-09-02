@@ -1854,10 +1854,10 @@ void calc_YUV_stddev_global(int cur_ppc_size, vector<vector<float>>& dev_pointnu
 	cout << "calc_YUV_dev method is done ..." << endl << endl;
 }
 
-void color_imaging(PPC p) {
+void color_imaging(PPC p, int tile_size) {
 
-	Mat colors(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC3);
-	Mat occlusions(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8U);
+	Mat colors(sqrt(total_num_cameras) * tile_size, sqrt(total_num_cameras) * tile_size, CV_8UC3);
+	Mat occlusions(sqrt(total_num_cameras) * tile_size, sqrt(total_num_cameras) * tile_size, CV_8U);
 
 	int num = 0;
 	for (int i = 0; i < sqrt(total_num_cameras); i++) {
@@ -1866,16 +1866,24 @@ void color_imaging(PPC p) {
 			num = i * sqrt(total_num_cameras) + j;
 
 			bool is_occ = p.CheckOcclusion(num);
-			if(is_occ) occlusions.at<uchar>(i, j) = 0;
-			else occlusions.at<uchar>(i, j) = 255;
-
 			Vec3b color = p.GetColor(num);
-			colors.at<Vec3b>(i, j) = color;
 
+			for (int ii = 0; ii < tile_size; ii++) {
+				for (int jj = 0; jj < tile_size; jj++) {
 
+					int iii = i * tile_size + ii;
+					int jjj = j * tile_size + jj;
+
+					if (is_occ) occlusions.at<uchar>(iii, jjj) = 0;
+					else occlusions.at<uchar>(iii, jjj) = 255;
+					colors.at<Vec3b>(iii, jjj) = color;
+
+				}
+			}
 		}
 	}
 
+	cvtColor(colors, colors, CV_YUV2BGR);
 	imshow("colors", colors);
 	imshow("occlusions", occlusions);
 	waitKey(0);
