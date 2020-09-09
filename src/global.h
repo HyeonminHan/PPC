@@ -141,12 +141,12 @@ public:
 
 	Vec3b GetColor(int idx)
 	{
-		Vec3b vuy;
-		vuy[0] = V[idx];
-		vuy[1] = U[idx];
-		vuy[2] = Y[idx];
+		Vec3b yuv;
+		yuv[0] = Y[idx];
+		yuv[1] = U[idx];
+		yuv[2] = V[idx];
 
-		return vuy;
+		return yuv;
 	}
 
 	int GetColorNum() {
@@ -214,7 +214,7 @@ public:
 
 	Vec3b GetColor(int idx)
 	{
-		Vec3b vuy;
+		Vec3b yuv;
 		int firstCamNum = 0;
 		for (int i = 0; i < total_num_cameras; i++) {
 			if (!CheckOcclusion(i)) {
@@ -231,11 +231,11 @@ public:
 				u += (uchar(VU[i] << 4) >> 4) - 7;
 			}
 		}
-		vuy[0] = v;
-		vuy[1] = u;
+		yuv[0] = Y[idx];
+		yuv[1] = u;
 
-		vuy[2] = Y[idx];
-		return vuy;
+		yuv[2] = v;
+		return yuv;
 	}
 
 	int GetColorNum() {
@@ -400,12 +400,12 @@ public:
 
 	Vec3b GetColor(int idx)
 	{
-		Vec3b vuy;
-		vuy[0] = avrV;
-		vuy[1] = avrU;
-		vuy[2] = Y[idx];
+		Vec3b yuv;
+		yuv[0] = Y[idx];
+		yuv[1] = avrU;
+		yuv[2] = avrV;
 
-		return vuy;
+		return yuv;
 	}
 
 	float* GetGeometry() {

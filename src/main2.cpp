@@ -44,7 +44,7 @@ int main()
 	colorspace = 0;
 
 	//unfixed variable
-	view_num = 3; 
+	view_num = 11; 
 	int max_ppc_size = 100000000;
 
 	
@@ -53,7 +53,7 @@ int main()
 
 #ifndef TEST
 	data_mode = 5;
-	voxel_div_num = 8192;
+	voxel_div_num = 1024;
 	cout << " ============================= " << endl;
 	cout << "          data_mode  " << data_mode << endl;
 	cout << " ============================= " << endl;
@@ -254,6 +254,14 @@ int main()
 				float making_ppc_all_time = (t4 - t1) / CLOCKS_PER_SEC;
 				float projection_time_per_view = 0.;
 #endif
+				int x, y;
+				while (1) {
+					cin >> x >> y;
+					if (x < 0 || y < 0 || x > _width || y > _height) break;
+					color_imaging(x, y, color_imgs, depth_imgs, min, Cube_size, cube_size, voxel_div_num, 1, 50);
+				}
+				exit(1);
+
 				clock_t t5 = clock();
 				while (end_ppc_generation == false) {
 
@@ -264,8 +272,8 @@ int main()
 
 					total_ppc_size += cur_ppc_size;
 					iteration++;
-					//perform_projection
 
+					//perform_projection
 					clock_t t7, t8;
 					for (int cam = 0; cam < total_num_cameras; cam++) {
 						cout << cam << "th pointcloud is being projected ..." << endl;
@@ -295,9 +303,6 @@ int main()
 				}
 				clock_t t6 = clock();
 				cout << "make ppc and projection final time : " << (t6 - t1) / CLOCKS_PER_SEC << endl << endl;
-
-				for(int i = 0; i< ppc_vec.size(); i++)
-					color_imaging(ppc_vec[i], 30);
 
 
 				printPSNRWithoutBlackPixel_RGB(color_imgs, projection_imgs, is_hole_proj_imgs, psnrs_p_1, psnrs_p_2, psnrs_p_3, num_holes_p);

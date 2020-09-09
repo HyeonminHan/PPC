@@ -2339,15 +2339,15 @@ void RGB_dev(vector<PPC> PPC, vector<vector<float>>& dev_pointnum_percent, vecto
 		int cam_number = 0;
 		for (int cam = 0; cam < total_num_cameras; cam++) {
 			Mat hsv(1, 1, CV_8UC3);
-			// ���԰� ��ħ.
+
 			hsv.at<Vec3b>(0, 0) = PPC[point_num].GetColor(cam);
 			cvtColor(hsv, hsv, CV_BGR2HSV);
 
 			if (!PPC[point_num].CheckOcclusion(cam)) {
 				cam_number++;
-				avr_r += (float)PPC[point_num].GetColor(cam)[0];
+				avr_r += (float)PPC[point_num].GetColor(cam)[2];
 				avr_g += (float)PPC[point_num].GetColor(cam)[1];
-				avr_b += (float)PPC[point_num].GetColor(cam)[2];
+				avr_b += (float)PPC[point_num].GetColor(cam)[0];
 				avr_r_2 += avr_r * avr_r;
 				avr_g_2 += avr_g * avr_g;
 				avr_b_2 += avr_b * avr_b;
@@ -2596,12 +2596,12 @@ void YUV_dev2(vector<PPC*> PPC, vector<vector<float>>& dev_pointnum, vector<int>
 				yuv.at<Vec3b>(0, 0) = PPC[point_num]->GetColor(cam);
 
 				cam_number++;
-				avr_y += (float)yuv.at<Vec3b>(0, 0)[2];
+				avr_y += (float)yuv.at<Vec3b>(0, 0)[0];
 				avr_u += (float)yuv.at<Vec3b>(0, 0)[1];
-				avr_v += (float)yuv.at<Vec3b>(0, 0)[0];
-				avr_y_2 += (float)yuv.at<Vec3b>(0, 0)[2] * (float)yuv.at<Vec3b>(0, 0)[2];
+				avr_v += (float)yuv.at<Vec3b>(0, 0)[2];
+				avr_y_2 += (float)yuv.at<Vec3b>(0, 0)[0] * (float)yuv.at<Vec3b>(0, 0)[0];
 				avr_u_2 += (float)yuv.at<Vec3b>(0, 0)[1] * (float)yuv.at<Vec3b>(0, 0)[1];
-				avr_v_2 += (float)yuv.at<Vec3b>(0, 0)[0] * (float)yuv.at<Vec3b>(0, 0)[0];
+				avr_v_2 += (float)yuv.at<Vec3b>(0, 0)[2] * (float)yuv.at<Vec3b>(0, 0)[2];
 			}
 		}
 		if (cam_number == 0) {
@@ -2684,12 +2684,12 @@ void YUV_dev3_about_MaxValue(vector<PPC*> PPC, vector<float>& point_num_per_colo
 				yuv.at<Vec3b>(0, 0) = PPC[point_num]->GetColor(cam);
 
 				cam_number++;
-				avr_y += (float)yuv.at<Vec3b>(0, 0)[2];
+				avr_y += (float)yuv.at<Vec3b>(0, 0)[0];
 				avr_u += (float)yuv.at<Vec3b>(0, 0)[1];
-				avr_v += (float)yuv.at<Vec3b>(0, 0)[0];
-				avr_y_2 += (float)yuv.at<Vec3b>(0, 0)[2] * (float)yuv.at<Vec3b>(0, 0)[2];
+				avr_v += (float)yuv.at<Vec3b>(0, 0)[2];
+				avr_y_2 += (float)yuv.at<Vec3b>(0, 0)[0] * (float)yuv.at<Vec3b>(0, 0)[0];
 				avr_u_2 += (float)yuv.at<Vec3b>(0, 0)[1] * (float)yuv.at<Vec3b>(0, 0)[1];
-				avr_v_2 += (float)yuv.at<Vec3b>(0, 0)[0] * (float)yuv.at<Vec3b>(0, 0)[0];
+				avr_v_2 += (float)yuv.at<Vec3b>(0, 0)[2] * (float)yuv.at<Vec3b>(0, 0)[2];
 			}
 		}
 
