@@ -970,17 +970,17 @@ void printPSNRWithBlackPixel_RGB(
 {
 	cout << "PSNR with hole." << endl;
 
-	float mse, psnr, tmp = 0;
+	float mse=0., psnr = 0., tmp = 0.;
 	float sum = 0;
 	int cnt = 0;
 
 	cvtColor(orig_img, orig_img, COLOR_BGR2GRAY);
 	cvtColor(proj_img, proj_img, COLOR_BGR2GRAY);
-
+	cout << 1 << endl;
 	int n = 0;
 
-	for (int v = 0; v < _height; v++)
-		for (int u = 0; u < _width; u++) {
+	for (int v = 0; v < orig_img.rows; v++)
+		for (int u = 0; u < orig_img.rows; u++) {
 			if (proj_img.at<uchar>(v, u) == 0) {
 				n++;
 			}
@@ -988,6 +988,7 @@ void printPSNRWithBlackPixel_RGB(
 			cnt++;
 			sum += tmp * tmp;
 		}
+	cout << 2 << endl;
 
 	mse = sum / cnt;
 	psnr = 10 * log10(255 * 255 / mse);
@@ -1191,6 +1192,128 @@ void calcPSNRWithBlackPixel_RGB_per_viewpoint(
 	psnrs_b.push_back(psnr_b);
 	psnrs_g.push_back(psnr_g);
 	psnrs_r.push_back(psnr_r);
+}
+
+void calcPSNRWithBlackPixel_YUV_per_viewpoint_inDCT(
+	Mat orig_img,
+	Mat proj_img)
+{
+	//////////////////////////
+
+	float mse_b = 0, psnr_b = 0, tmp_b = 0;
+	float mse_g = 0, psnr_g = 0, tmp_g = 0;
+	float mse_r = 0, psnr_r = 0, tmp_r = 0;
+
+	float sum_b = 0, sum_g = 0, sum_r = 0;
+	int cnt_b = 0, cnt_g = 0, cnt_r = 0;
+
+	Mat bgr_orig[3];
+	Mat bgr_proj[3];
+
+	Mat orig_ = orig_img.clone();
+	Mat proj_ = proj_img.clone();
+
+	//cvtColor(orig_, orig_, COLOR_YUV2BGR);
+	//cvtColor(proj_, proj_, COLOR_YUV2BGR);
+
+	split(orig_, bgr_orig);
+	split(proj_, bgr_proj);
+
+	int n = 0;
+
+	for (int v = 0; v < orig_img.rows; v++)
+		for (int u = 0; u < orig_img.cols; u++) {
+
+			//if (proj_img.at<Vec3b>(v, u)[0] == 0 )
+				//if (bgr_proj[0].at<uchar>(v, u) == 0 && bgr_proj[1].at<uchar>(v, u) == 0 && bgr_proj[2].at<uchar>(v, u) == 0) {
+			//	n++;
+
+			tmp_b = bgr_orig[0].at<uchar>(v, u) - bgr_proj[0].at<uchar>(v, u);
+			cnt_b++;
+			sum_b += tmp_b * tmp_b;
+
+			tmp_g = bgr_orig[1].at<uchar>(v, u) - bgr_proj[1].at<uchar>(v, u);
+			cnt_g++;
+			sum_g += tmp_g * tmp_g;
+
+			tmp_r = bgr_orig[2].at<uchar>(v, u) - bgr_proj[2].at<uchar>(v, u);
+			cnt_r++;
+			sum_r += tmp_r * tmp_r;
+		}
+
+	mse_b = sum_b / cnt_b;
+	psnr_b = 10 * log10(255 * 255 / mse_b);
+
+	mse_g = sum_g / cnt_g;
+	psnr_g = 10 * log10(255 * 255 / mse_g);
+
+	mse_r = sum_r / cnt_r;
+	psnr_r = 10 * log10(255 * 255 / mse_r);
+
+	cout << "psnr Y : " << psnr_b << endl;
+	cout << "psnr U : " << psnr_g << endl;
+	cout << "psnr V : " << psnr_r << endl;
+}
+
+void calcPSNRWithBlackPixel_RGB_per_viewpoint_inDCT(
+	Mat orig_img,
+	Mat proj_img)
+{
+	//////////////////////////
+
+	float mse_b = 0, psnr_b = 0, tmp_b = 0;
+	float mse_g = 0, psnr_g = 0, tmp_g = 0;
+	float mse_r = 0, psnr_r = 0, tmp_r = 0;
+
+	float sum_b = 0, sum_g = 0, sum_r = 0;
+	int cnt_b = 0, cnt_g = 0, cnt_r = 0;
+
+	Mat bgr_orig[3];
+	Mat bgr_proj[3];
+
+	Mat orig_ = orig_img.clone();
+	Mat proj_ = proj_img.clone();
+
+	cvtColor(orig_, orig_, COLOR_YUV2BGR);
+	cvtColor(proj_, proj_, COLOR_YUV2BGR);
+
+	split(orig_, bgr_orig);
+	split(proj_, bgr_proj);
+
+	int n = 0;
+
+	for (int v = 0; v < orig_img.rows; v++)
+		for (int u = 0; u < orig_img.cols; u++) {
+
+			//if (proj_img.at<Vec3b>(v, u)[0] == 0 )
+				//if (bgr_proj[0].at<uchar>(v, u) == 0 && bgr_proj[1].at<uchar>(v, u) == 0 && bgr_proj[2].at<uchar>(v, u) == 0) {
+			//	n++;
+
+			tmp_b = bgr_orig[0].at<uchar>(v, u) - bgr_proj[0].at<uchar>(v, u);
+			cnt_b++;
+			sum_b += tmp_b * tmp_b;
+
+			tmp_g = bgr_orig[1].at<uchar>(v, u) - bgr_proj[1].at<uchar>(v, u);
+			cnt_g++;
+			sum_g += tmp_g * tmp_g;
+
+			tmp_r = bgr_orig[2].at<uchar>(v, u) - bgr_proj[2].at<uchar>(v, u);
+			cnt_r++;
+			sum_r += tmp_r * tmp_r;
+		}
+
+	mse_b = sum_b / cnt_b;
+	psnr_b = 10 * log10(255 * 255 / mse_b);
+
+	mse_g = sum_g / cnt_g;
+	psnr_g = 10 * log10(255 * 255 / mse_g);
+
+	mse_r = sum_r / cnt_r;
+	psnr_r = 10 * log10(255 * 255 / mse_r);
+
+	cout << "psnr B : " << psnr_b << endl;
+	cout << "psnr G : " << psnr_g << endl;
+	cout << "psnr R : " << psnr_r << endl;
 }
 
 // BGR to Gray

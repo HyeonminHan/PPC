@@ -113,3 +113,11 @@ void printPSNRWithBlackPixel(vector<Mat> orig_imgs, vector<Mat> proj_imgs, vecto
 vector<double> operator*(vector<double> a, vector<double> b);
 vector<double> operator-(vector<double> a, double b);
 Matrix4d compute_projection_matrices(int cam_num);
+
+void calcPSNRWithBlackPixel_YUV_per_viewpoint_inDCT(
+	Mat orig_img,
+	Mat proj_img);
+
+void calcPSNRWithBlackPixel_RGB_per_viewpoint_inDCT(
+	Mat orig_img,
+	Mat proj_img);

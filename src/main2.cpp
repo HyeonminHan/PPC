@@ -47,12 +47,11 @@ int main()
 	view_num = 11; 
 	int max_ppc_size = 100000000;
 
-	
 	ppc_vec.resize(max_ppc_size);
 	const int furthest_index = (view_num + 1) / 2 * 22;
 
 #ifndef TEST
-	data_mode = 5;
+	data_mode = 10;
 	voxel_div_num = 1024;
 	cout << " ============================= " << endl;
 	cout << "          data_mode  " << data_mode << endl;
@@ -258,7 +257,7 @@ int main()
 				while (1) {
 					cin >> x >> y;
 					if (x < 0 || y < 0 || x > _width || y > _height) break;
-					color_imaging(x, y, color_imgs, depth_imgs, min, Cube_size, cube_size, voxel_div_num, 1, 50);
+					color_imaging(x, y, color_imgs, depth_imgs, min, Cube_size, cube_size, voxel_div_num, 30);
 				}
 				exit(1);
 

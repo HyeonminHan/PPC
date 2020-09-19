@@ -157,4 +157,4 @@ void calc_YUV_stddev_global(int cur_ppc_size,
 	vector<int>& point_num_per_color, 
 	vector<int>& full_color_dev);
 
-void color_imaging(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat> depth_imgs, vector<float> min, vector<float> Cube_size, vector<float> voxel_size, int voxel_div_num, int window_size, int tile_size);
+void color_imaging(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat> depth_imgs, vector<float> min, vector<float> Cube_size, vector<float> voxel_size, int voxel_div_num, int tile_size);

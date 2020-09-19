@@ -1854,11 +1854,9 @@ void calc_YUV_stddev_global(int cur_ppc_size, vector<vector<float>>& dev_pointnu
 	cout << "calc_YUV_dev method is done ..." << endl << endl;
 }
 
-void color_imaging(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat> depth_imgs, vector<float> min, vector<float> Cube_size, vector<float> voxel_size, int voxel_div_num, int window_size, int tile_size) {
+void color_imaging(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat> depth_imgs, vector<float> min, vector<float> Cube_size, vector<float> voxel_size, int voxel_div_num, int tile_size) {
 
-	Mat colors(sqrt(total_num_cameras) * tile_size, sqrt(total_num_cameras) * tile_size, CV_8UC3);
-	Mat occlusions(sqrt(total_num_cameras) * tile_size, sqrt(total_num_cameras) * tile_size, CV_8U);
-
+	
 	Vec3b d, color;
 	Vec3s d_s, color_s;
 	double Z, X = 0.0, Y = 0.0;
@@ -1951,9 +1949,7 @@ void color_imaging(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat>
 		}
 	}
 
-
 	vector<int> order_vec(total_num_cameras);
-
 	for (int i = 0; i < total_num_cameras; i++) {
 		if (i <= total_num_cameras/2) {
 			order_vec[i] = (total_num_cameras / 2 - i) * 2;
@@ -1963,10 +1959,22 @@ void color_imaging(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat>
 		}
 	}
 
-	for (int i = 0; i < total_num_cameras; i++)
-		cout << i << " " << order_vec[i] << endl;
-
 	int num = 0;
+	vector<ushort> pixel_sum(3);
+	int pixel_count = 0;
+
+	Mat colors(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC3);
+	Mat colors_zoom(sqrt(total_num_cameras)* tile_size, sqrt(total_num_cameras)* tile_size, CV_8UC3);
+	Mat colors_y_zoom(sqrt(total_num_cameras)* tile_size, sqrt(total_num_cameras)* tile_size, CV_8UC1);
+	Mat colors_u_zoom(sqrt(total_num_cameras)* tile_size, sqrt(total_num_cameras)* tile_size, CV_8UC1);
+	Mat colors_v_zoom(sqrt(total_num_cameras)* tile_size, sqrt(total_num_cameras)* tile_size, CV_8UC1);
+	Mat occlusions_zoom(sqrt(total_num_cameras)* tile_size, sqrt(total_num_cameras)* tile_size, CV_8U);
+
+	Mat colors_dct_y(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
+	Mat colors_dct_u(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
+	Mat colors_dct_v(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
+
+
 	for (int i = 0; i < sqrt(total_num_cameras); i++) {
 		for (int j = 0; j < sqrt(total_num_cameras); j++) {
 
@@ -1974,73 +1982,301 @@ void color_imaging(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat>
 			bool is_occ = ppc.CheckOcclusion(order_vec[num]);
 			Vec3b color = ppc.GetColor(order_vec[num]);
 
-			if (is_occ) {
-				int pixel_count = 0;
-				vector<ushort> pixel_sum(3);
-				cout << 1 << endl;
+			if(!is_occ) {
 
-				for (int h = i - window_size; h <= i + window_size; h++) {
-					for (int w = j - window_size; w <= j + window_size; w++) {
-
-						int num_ = h * sqrt(total_num_cameras) + w;
-						cout << "num_: " << num_ << endl;
-						if (num_ < 0 || num_ >= total_num_cameras) continue;
-						else if (h < 0 || w < 0 ||
-							h >= tile_size * sqrt(total_num_cameras) || 
-							w >= tile_size * sqrt(total_num_cameras)) continue;
-						else if (ppc.CheckOcclusion(order_vec[num_])) continue;
-						else
-						{
-							Vec3b color_ = ppc.GetColor(order_vec[num_]);
-							pixel_sum[0] += color_[0];
-							pixel_sum[1] += color_[1];
-							pixel_sum[2] += color_[2];
-							pixel_count++;
-						}
-					}
-				}
-				cout << 3 << endl;
+				pixel_sum[0] += color[0];
+				pixel_sum[1] += color[1];
+				pixel_sum[2] += color[2];
+				pixel_count++;
 
 				for (int ii = 0; ii < tile_size; ii++) {
 					for (int jj = 0; jj < tile_size; jj++) {
 						int iii = i * tile_size + ii;
 						int jjj = j * tile_size + jj;
-						occlusions.at<uchar>(iii, jjj) = 0;
+						occlusions_zoom.at<uchar>(iii, jjj) = 255;
+						colors_zoom.at<Vec3b>(iii, jjj) = color;
+						colors_y_zoom.at<uchar>(iii, jjj) = color[0];
+						colors_u_zoom.at<uchar>(iii, jjj) = color[1];
+						colors_v_zoom.at<uchar>(iii, jjj) = color[2];
+					}
+				}
+				colors.at<Vec3b>(i, j) = color;
+				colors_dct_y.at<uchar>(i, j) = color[0];
+				colors_dct_u.at<uchar>(i, j) = color[1];
+				colors_dct_v.at<uchar>(i, j) = color[2];
+			}
+		}
+	}
+
+	for (int i = 0; i < sqrt(total_num_cameras); i++) {
+		for (int j = 0; j < sqrt(total_num_cameras); j++) {
+
+			num = i * sqrt(total_num_cameras) + j;
+			bool is_occ = ppc.CheckOcclusion(order_vec[num]);
+
+			if (is_occ) {
+				for (int ii = 0; ii < tile_size; ii++) {
+					for (int jj = 0; jj < tile_size; jj++) {
+						int iii = i * tile_size + ii;
+						int jjj = j * tile_size + jj;
+						occlusions_zoom.at<uchar>(iii, jjj) = 0;
 
 						if (pixel_count == 0)
 						{
-							colors.at<Vec3b>(iii, jjj) = 0;
+							cout << " NO !! " << endl;
+							colors_zoom.at<Vec3b>(iii, jjj) = 0;
 						}
 						else
 						{
-							colors.at<Vec3b>(iii, jjj)[0] = uchar(pixel_sum[0] / pixel_count);
-							colors.at<Vec3b>(iii, jjj)[1] = uchar(pixel_sum[1] / pixel_count);
-							colors.at<Vec3b>(iii, jjj)[2] = uchar(pixel_sum[2] / pixel_count);
+							colors_zoom.at<Vec3b>(iii, jjj)[0] = uchar(pixel_sum[0] / pixel_count);
+							colors_zoom.at<Vec3b>(iii, jjj)[1] = uchar(pixel_sum[1] / pixel_count);
+							colors_zoom.at<Vec3b>(iii, jjj)[2] = uchar(pixel_sum[2] / pixel_count);
+							colors_y_zoom.at<uchar>(iii, jjj) = uchar(pixel_sum[0] / pixel_count);
+							colors_u_zoom.at<uchar>(iii, jjj) = uchar(pixel_sum[1] / pixel_count);
+							colors_v_zoom.at<uchar>(iii, jjj) = uchar(pixel_sum[2] / pixel_count);
 						}
 					}
 				}
-				cout << 4 << endl;
-
+				colors.at<Vec3b>(i, j) = color;
+				colors_dct_y.at<uchar>(i, j) = uchar(pixel_sum[0] / pixel_count);
+				colors_dct_u.at<uchar>(i, j) = uchar(pixel_sum[1] / pixel_count);
+				colors_dct_v.at<uchar>(i, j) = uchar(pixel_sum[2] / pixel_count);
 			}
+		}
+	}
 
-			else {
-				for (int ii = 0; ii < tile_size; ii++) {
-					for (int jj = 0; jj < tile_size; jj++) {
-						int iii = i * tile_size + ii;
-						int jjj = j * tile_size + jj;
-						occlusions.at<uchar>(iii, jjj) = 255;
-						colors.at<Vec3b>(iii, jjj) = color;
-					}
+	Mat y_dct, u_dct, v_dct;
+	Mat y_idct, u_idct, v_idct;
+
+	colors_dct_y.convertTo(colors_dct_y, CV_32F);
+	colors_dct_u.convertTo(colors_dct_u, CV_32F);
+	colors_dct_v.convertTo(colors_dct_v, CV_32F);
+
+	//perform DCT
+	dct(colors_dct_y, y_dct);
+	dct(colors_dct_u, u_dct);
+	dct(colors_dct_v, v_dct);
+
+	int dct_y_valid_pixnum = 8;
+	int dct_uv_valid_pixnum = 8;
+
+	for (int i = 0; i < y_dct.rows; i++) {
+		for (int j = 0; j < y_dct.cols; j++) {
+			if (i < dct_y_valid_pixnum && j < dct_y_valid_pixnum) continue;
+			y_dct.at<float>(i, j) = 0;
+		}
+	}
+
+	for (int i = 0; i < u_dct.rows; i++) {
+		for (int j = 0; j < u_dct.cols; j++) {
+			if (i < dct_uv_valid_pixnum && j < dct_uv_valid_pixnum) continue;
+			u_dct.at<float>(i, j) = 0;
+			v_dct.at<float>(i, j) = 0;
+		}
+	}
+
+	cout << "dct y****" << endl;
+	for (int i = 0; i < u_dct.rows; i++) {
+		for (int j = 0; j < u_dct.cols; j++)
+			cout << y_dct.at<float>(i, j) << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	cout << "dct u****" << endl;
+	for (int i = 0; i < u_dct.rows; i++) {
+		for (int j = 0; j < u_dct.cols; j++)
+			cout << u_dct.at<float>(i, j) << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	dct(y_dct, y_idct, DCT_INVERSE);
+	dct(u_dct, u_idct, DCT_INVERSE);
+	dct(v_dct, v_idct, DCT_INVERSE);
+
+	cout << "idct u****" << endl;
+	for (int i = 0; i < u_idct.rows; i++) {
+		for (int j = 0; j < u_idct.cols; j++)
+			cout << u_idct.at<float>(i, j) << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	y_idct.convertTo(y_idct, CV_8U);
+	u_idct.convertTo(u_idct, CV_8U);
+	v_idct.convertTo(v_idct, CV_8U);
+
+	Mat colors_idct(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC3);
+
+	Mat yuv_idct[3];
+	yuv_idct[0] = y_idct.clone();
+	yuv_idct[1] = u_idct.clone();
+	yuv_idct[2] = v_idct.clone();
+
+	merge(yuv_idct, 3, colors_idct);
+
+	calcPSNRWithBlackPixel_YUV_per_viewpoint_inDCT(colors, colors_idct);
+	calcPSNRWithBlackPixel_RGB_per_viewpoint_inDCT(colors, colors_idct);
+
+	cout << "color y" << endl;
+	for (int i = 0; i < colors_dct_y.rows; i++) {
+		for (int j = 0; j < colors_dct_y.cols; j++)
+			cout << colors_dct_y.at<float>(i, j) << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	cout << "dct y" << endl;
+	for (int i = 0; i < y_dct.rows; i++) {
+		for (int j = 0; j < y_dct.cols; j++)
+			cout << y_dct.at<float>(i, j) << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	cout << "idct y" << endl;
+	for (int i = 0; i < y_idct.rows; i++) {
+		for (int j = 0; j < y_idct.cols; j++)
+			cout << (int)y_idct.at<uchar>(i, j) << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	cout << "color u" << endl;
+	for (int i = 0; i < colors_dct_u.rows; i++) {
+		for (int j = 0; j < colors_dct_u.cols; j++)
+			cout << colors_dct_u.at<float>(i, j) << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	cout << "dct u" << endl;
+	for (int i = 0; i < u_dct.rows; i++) {
+		for (int j = 0; j < u_dct.cols; j++)
+			cout << u_dct.at<float>(i, j) << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	cout << "idct u" << endl;
+	for (int i = 0; i < u_idct.rows; i++) {
+		for (int j = 0; j < u_idct.cols; j++)
+			cout << (int)u_idct.at<uchar>(i, j) << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	cout << "color v" << endl;
+	for (int i = 0; i < colors_dct_v.rows; i++) {
+		for (int j = 0; j < colors_dct_v.cols; j++)
+			cout << colors_dct_v.at<float>(i, j) << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	cout << "dct v" << endl;
+	for (int i = 0; i < v_dct.rows; i++) {
+		for (int j = 0; j < v_dct.cols; j++)
+			cout << v_dct.at<float>(i, j) << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	cout << "idct v" << endl;
+	for (int i = 0; i < v_idct.rows; i++) {
+		for (int j = 0; j < v_idct.cols; j++)
+			cout << (int)v_idct.at<uchar>(i, j) << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	
+	//normalize(y_dct, colors_dct_y_zoom, 0., 255., NORM_MINMAX);
+	//normalize(u_dct, colors_dct_u_zoom, 0., 255., NORM_MINMAX);
+	//normalize(v_dct, colors_dct_v_zoom, 0., 255., NORM_MINMAX);
+
+	//
+	//colors_dct_y_zoom.convertTo(colors_dct_y_zoom, CV_8U);
+	//colors_dct_u_zoom.convertTo(colors_dct_u_zoom, CV_8U);
+	//colors_dct_v_zoom.convertTo(colors_dct_v_zoom, CV_8U);
+
+	//cout << "normalized dct y" << endl;
+	//for (int i = 0; i < colors_dct_y_zoom.rows; i++) {
+	//	for (int j = 0; j < colors_dct_y_zoom.cols; j++)
+	//		cout << (int)colors_dct_y_zoom.at<uchar>(i, j) << " ";
+	//	cout << endl;
+	//}
+	//cout << endl;
+
+	//cout << "normalized dct u" << endl;
+	//for (int i = 0; i < colors_dct_u_zoom.rows; i++) {
+	//	for (int j = 0; j < colors_dct_u_zoom.cols; j++)
+	//		cout << (int)colors_dct_u_zoom.at<uchar>(i, j) << " ";
+	//	cout << endl;
+	//}
+	//cout << endl;
+
+	//cout << "normalized dct v" << endl;
+	//for (int i = 0; i < colors_dct_v_zoom.rows; i++) {
+	//	for (int j = 0; j < colors_dct_v_zoom.cols; j++)
+	//		cout << (int)colors_dct_v_zoom.at<uchar>(i, j) << " ";
+	//	cout << endl;
+	//}
+	//cout << endl;
+
+	Mat colors_idct_zoom(sqrt(total_num_cameras)* tile_size, sqrt(total_num_cameras)* tile_size, CV_8UC3);
+	Mat colors_idct_y_zoom(sqrt(total_num_cameras)* tile_size, sqrt(total_num_cameras)* tile_size, CV_8U);
+	Mat colors_idct_u_zoom(sqrt(total_num_cameras)* tile_size, sqrt(total_num_cameras)* tile_size, CV_8U);
+	Mat colors_idct_v_zoom(sqrt(total_num_cameras)* tile_size, sqrt(total_num_cameras)* tile_size, CV_8U);
+
+	for (int i = 0; i < sqrt(total_num_cameras); i++) {
+		for (int j = 0; j < sqrt(total_num_cameras); j++) {
+			for (int ii = 0; ii < tile_size; ii++) {
+				for (int jj = 0; jj < tile_size; jj++) {
+					int iii = i * tile_size + ii;
+					int jjj = j * tile_size + jj;
+
+					colors_idct_zoom.at<Vec3b>(iii, jjj) = colors_idct.at<Vec3b>(i, j);
+					colors_idct_y_zoom.at<uchar>(iii, jjj) = y_idct.at<uchar>(i, j);
+					colors_idct_u_zoom.at<uchar>(iii, jjj) = u_idct.at<uchar>(i, j);
+					colors_idct_v_zoom.at<uchar>(iii, jjj) = v_idct.at<uchar>(i, j);
 				}
 			}
 		}
 	}
 
-	cvtColor(colors, colors, CV_YUV2BGR);
-	imshow("colors", colors);
-	imshow("occlusions", occlusions);
+	cvtColor(colors_zoom, colors_zoom, CV_YUV2BGR);
+	cvtColor(colors_idct_zoom, colors_idct_zoom, CV_YUV2BGR);
 
-	moveWindow("colors", 100, 100);
-	moveWindow("occlusions", 100, 700);
+	imshow("colors_zoom", colors_zoom);
+	imshow("colors_y_zoom", colors_y_zoom);
+	imshow("colors_u_zoom", colors_u_zoom);
+	imshow("colors_v_zoom", colors_v_zoom);
+	imshow("occlusions_zoom", occlusions_zoom);
+
+	imshow("idct_result", colors_idct_zoom);
+	imshow("y_idct", colors_idct_y_zoom);
+	imshow("u_idct", colors_idct_u_zoom);
+	imshow("v_idct", colors_idct_v_zoom);
+
+	//imshow("colors_y_dct", colors_dct_y_zoom);
+	//imshow("colors_u_dct", colors_dct_u_zoom);
+	//imshow("colors_v_dct", colors_dct_v_zoom);
+
+	moveWindow("colors_zoom", 100, 100);
+	moveWindow("colors_y_zoom", 100+ sqrt(total_num_cameras)*tile_size, 100);
+	moveWindow("colors_u_zoom", 100 + 2*sqrt(total_num_cameras) * tile_size, 100);
+	moveWindow("colors_v_zoom", 100 + 3*sqrt(total_num_cameras) * tile_size, 100);
+	moveWindow("occlusions_zoom", 100 + 4*sqrt(total_num_cameras) * tile_size, 100);
+
+	moveWindow("idct_result", 100, 500);
+	moveWindow("y_idct", 100 + sqrt(total_num_cameras) * tile_size, 500);
+	moveWindow("u_idct", 100 + 2 * sqrt(total_num_cameras) * tile_size, 500);
+	moveWindow("v_idct", 100 + 3 * sqrt(total_num_cameras) * tile_size, 500);
+
+	//moveWindow("colors_y_dct", 100 + sqrt(total_num_cameras) * tile_size, 500);
+	//moveWindow("colors_u_dct", 100 + 2 * sqrt(total_num_cameras) * tile_size, 500);
+	//moveWindow("colors_v_dct", 100 + 3 * sqrt(total_num_cameras) * tile_size, 500);
 	waitKey(0);
 }
