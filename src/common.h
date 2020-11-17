@@ -114,10 +114,12 @@ vector<double> operator*(vector<double> a, vector<double> b);
 vector<double> operator-(vector<double> a, double b);
 Matrix4d compute_projection_matrices(int cam_num);
 
-void calcPSNRWithBlackPixel_YUV_per_viewpoint_inDCT(
+vector<float> calcPSNRWithBlackPixel_YUV_per_viewpoint_inDCT(
 	Mat orig_img,
-	Mat proj_img);
+	Mat proj_img,
+	Mat occlusion_img);
 
 void calcPSNRWithBlackPixel_RGB_per_viewpoint_inDCT(
 	Mat orig_img,
-	Mat proj_img);
+	Mat proj_img,
+	Mat occlusion_img);

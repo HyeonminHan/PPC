@@ -1,6 +1,7 @@
 #include "common.h"
 #define _CRT_SECURE_NO_WARNINGS
 
+
 vector<int> make_camOrder(int refView, int mask_size, map<int, int> &LookUpTable) {
 	vector<int> camera_order;
 	if (refView == 220 && data_mode >= 4) {
@@ -1194,9 +1195,10 @@ void calcPSNRWithBlackPixel_RGB_per_viewpoint(
 	psnrs_r.push_back(psnr_r);
 }
 
-void calcPSNRWithBlackPixel_YUV_per_viewpoint_inDCT(
+vector<float> calcPSNRWithBlackPixel_YUV_per_viewpoint_inDCT(
 	Mat orig_img,
-	Mat proj_img)
+	Mat proj_img,
+	Mat occlusion_img)
 {
 	//////////////////////////
 
@@ -1223,10 +1225,7 @@ void calcPSNRWithBlackPixel_YUV_per_viewpoint_inDCT(
 
 	for (int v = 0; v < orig_img.rows; v++)
 		for (int u = 0; u < orig_img.cols; u++) {
-
-			//if (proj_img.at<Vec3b>(v, u)[0] == 0 )
-				//if (bgr_proj[0].at<uchar>(v, u) == 0 && bgr_proj[1].at<uchar>(v, u) == 0 && bgr_proj[2].at<uchar>(v, u) == 0) {
-			//	n++;
+			if (occlusion_img.at<bool>(v, u)) continue;
 
 			tmp_b = bgr_orig[0].at<uchar>(v, u) - bgr_proj[0].at<uchar>(v, u);
 			cnt_b++;
@@ -1239,6 +1238,9 @@ void calcPSNRWithBlackPixel_YUV_per_viewpoint_inDCT(
 			tmp_r = bgr_orig[2].at<uchar>(v, u) - bgr_proj[2].at<uchar>(v, u);
 			cnt_r++;
 			sum_r += tmp_r * tmp_r;
+			//cout << "y " << (int)bgr_orig[0].at<uchar>(v, u) << "\t" << (int)bgr_proj[0].at<uchar>(v, u) << endl;
+			//cout << "u " << (int)bgr_orig[1].at<uchar>(v, u) << "\t" << (int)bgr_proj[1].at<uchar>(v, u) << endl;
+			//cout << "v " << (int)bgr_orig[2].at<uchar>(v, u) << "\t" << (int)bgr_proj[2].at<uchar>(v, u) << endl;
 		}
 
 	mse_b = sum_b / cnt_b;
@@ -1253,14 +1255,17 @@ void calcPSNRWithBlackPixel_YUV_per_viewpoint_inDCT(
 	cout << "psnr Y : " << psnr_b << endl;
 	cout << "psnr U : " << psnr_g << endl;
 	cout << "psnr V : " << psnr_r << endl;
+
+	vector<float> psnrs = { psnr_b, psnr_g, psnr_r };
+	return psnrs;
 }
 
 void calcPSNRWithBlackPixel_RGB_per_viewpoint_inDCT(
 	Mat orig_img,
-	Mat proj_img)
+	Mat proj_img,
+	Mat occlusion_img)
 {
 	//////////////////////////
-
 	float mse_b = 0, psnr_b = 0, tmp_b = 0;
 	float mse_g = 0, psnr_g = 0, tmp_g = 0;
 	float mse_r = 0, psnr_r = 0, tmp_r = 0;
@@ -1285,6 +1290,7 @@ void calcPSNRWithBlackPixel_RGB_per_viewpoint_inDCT(
 	for (int v = 0; v < orig_img.rows; v++)
 		for (int u = 0; u < orig_img.cols; u++) {
 
+			if (occlusion_img.at<bool>(v, u)) continue;
 			//if (proj_img.at<Vec3b>(v, u)[0] == 0 )
 				//if (bgr_proj[0].at<uchar>(v, u) == 0 && bgr_proj[1].at<uchar>(v, u) == 0 && bgr_proj[2].at<uchar>(v, u) == 0) {
 			//	n++;

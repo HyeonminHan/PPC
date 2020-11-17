@@ -51,8 +51,8 @@ int main()
 	const int furthest_index = (view_num + 1) / 2 * 22;
 
 #ifndef TEST
-	data_mode = 10;
-	voxel_div_num = 1024;
+	data_mode = 5;
+	voxel_div_num = 8192;
 	cout << " ============================= " << endl;
 	cout << "          data_mode  " << data_mode << endl;
 	cout << " ============================= " << endl;
@@ -67,7 +67,7 @@ int main()
 #endif
 
 #ifdef TEST
-	vector<int> datas = { 5, 10 };
+	vector<int> datas = { 4, 10 };
 	for (int data_i = 0; data_i < datas.size(); data_i++) {
 		data_mode = datas[data_i];
 #endif
@@ -254,12 +254,60 @@ int main()
 				float projection_time_per_view = 0.;
 #endif
 				int x, y;
-				while (1) {
-					cin >> x >> y;
-					if (x < 0 || y < 0 || x > _width || y > _height) break;
-					color_imaging(x, y, color_imgs, depth_imgs, min, Cube_size, cube_size, voxel_div_num, 30);
-				}
-				exit(1);
+				char destroy_window;
+				vector<float> avr_psnrs_spe = { 0., 0., 0. };
+				vector<float> avr_psnrs_lam = { 0., 0., 0. };
+
+				int cnt_spe = 0;
+				int cnt_lam = 0;
+
+				//while (1) {
+				//	/*cin >> x >> y;
+				//	if (!cin) {
+				//		cin.clear();
+				//		cin.ignore(256, '\n');
+				//		continue;
+				//	}
+				//	if (x < 0 || y < 0 || x > _width || y > _height) {
+				//		cerr << "out of range" << endl;
+				//		cin.clear();
+				//		cin.ignore(256, '\n');
+				//		continue;
+				//	}*/
+				//	//Mat ref_img = color_imgs[0].clone();
+				//	Mat ref_img_spe = color_imgs[0].clone();
+				//	Mat ref_img_lam = color_imgs[0].clone();
+				//	cvtColor(ref_img_spe, ref_img_spe, CV_YUV2BGR);
+				//	cvtColor(ref_img_lam, ref_img_lam, CV_YUV2BGR);
+				//	
+				//	for (int j = 0; j < 100; j++) {//1080
+				//		for (int i = 0; i < 100; i++) {//1920
+				//			x = i * 3;
+				//			y = j * 2;
+
+				//			color_imaging2(x, y, color_imgs, depth_imgs, min, Cube_size, cube_size, voxel_div_num, 30, ref_img_spe, ref_img_lam, avr_psnrs_spe, avr_psnrs_lam, cnt_spe, cnt_lam);
+				//			//color_imaging(x, y, color_imgs, depth_imgs, min, Cube_size, cube_size, voxel_div_num, 30, ref_img);
+				//		}
+				//	}
+
+				//	avr_psnrs_spe[0] /= cnt_spe;
+				//	avr_psnrs_spe[1] /= cnt_spe;
+				//	avr_psnrs_spe[2] /= cnt_spe;
+
+				//	avr_psnrs_lam[0] /= cnt_lam;
+				//	avr_psnrs_lam[1] /= cnt_lam;
+				//	avr_psnrs_lam[2] /= cnt_lam;
+
+				//	cout << "avr_psnrs_lam : " << avr_psnrs_lam[0] << "\t" << avr_psnrs_lam[1] << "\t" << avr_psnrs_lam[2] << endl;
+				//	cout << "avr_psnrs_spe : " << avr_psnrs_spe[0] << "\t" << avr_psnrs_spe[1] << "\t" << avr_psnrs_spe[2] << endl;
+				//	//imwrite("output\\ref_img.jpg", ref_img);
+				//	imwrite("output\\ref_img_spe.jpg", ref_img_spe);
+				//	imwrite("output\\ref_img_lam.jpg", ref_img_lam);
+				//	break;
+				//}
+
+
+				//exit(1);
 
 				clock_t t5 = clock();
 				while (end_ppc_generation == false) {
@@ -277,13 +325,13 @@ int main()
 					for (int cam = 0; cam < total_num_cameras; cam++) {
 						cout << cam << "th pointcloud is being projected ..." << endl;
 						int nNeighbor = 4;
-						int window_size = 2;
+						
 
 						//execute projection of ppc to each view
 						t7 = clock();
 						perform_projection(cam, cur_ppc_size, projection_imgs[cam], is_hole_proj_imgs[cam], depth_value_imgs[cam]);
 						is_hole_filled_imgs[cam] = is_hole_proj_imgs[cam].clone();
-						holefilling_per_viewpoint(projection_imgs[cam], filled_imgs[cam], is_hole_filled_imgs[cam], window_size);
+						
 						t8 = clock();
 
 						cout << "projection and hole filling one view time : " << (t8 - t7) / CLOCKS_PER_SEC << endl;
@@ -302,12 +350,44 @@ int main()
 				}
 				clock_t t6 = clock();
 				cout << "make ppc and projection final time : " << (t6 - t1) / CLOCKS_PER_SEC << endl << endl;
+				PointCloud<PointXYZRGB>::Ptr pc(new PointCloud<PointXYZRGB>);
+				int window_size = 2;
+				for(int i = 0; i< total_num_cameras; i++)
+					holefilling_per_viewpoint(projection_imgs[i], filled_imgs[i], is_hole_filled_imgs[i], window_size);
+				//
+				//for (int i = 0; i < cur_ppc_size; i++) {
+				//	PointXYZRGB p;
 
+				//	if (ppc_vec[i].CheckOcclusion(0)) continue;
+				//	float* geo = ppc_vec[i].GetGeometry();
+				//	Vec3b color = ppc_vec[i].GetColor(0);
 
-				printPSNRWithoutBlackPixel_RGB(color_imgs, projection_imgs, is_hole_proj_imgs, psnrs_p_1, psnrs_p_2, psnrs_p_3, num_holes_p);
-				printPSNRWithBlackPixel_RGB(color_imgs, filled_imgs, is_hole_filled_imgs, psnrs_h_1, psnrs_h_2, psnrs_h_3, num_holes_h);
+				//	p.x = geo[0];
+				//	p.y = geo[1];
+				//	p.z = geo[2];
+				//	p.b = color[0];
+				//	p.g = color[1];
+				//	p.r = color[2];
+
+				//	pc->points.push_back(p);
+				//}
+
+				//view_PC_yuvTorgb(pc);
+
+				//Mat proj_viewImg, filled_viewImg;
+
+				//cvtColor(projection_imgs[0], proj_viewImg, CV_YUV2BGR);
+				//cvtColor(filled_imgs[0], filled_viewImg, CV_YUV2BGR);
+
+				//imwrite("projection_img.png", proj_viewImg);
+				//imwrite("filled_imgs.png", filled_viewImg);
+				////waitKey(0);
+
+				//printPSNRWithoutBlackPixel_RGB(color_imgs, projection_imgs, is_hole_proj_imgs, psnrs_p_1, psnrs_p_2, psnrs_p_3, num_holes_p);
+				//printPSNRWithBlackPixel_RGB(color_imgs, filled_imgs, is_hole_filled_imgs, psnrs_h_1, psnrs_h_2, psnrs_h_3, num_holes_h);
 
 #ifdef TEST			
+
 				//save images
 				string folder_name_string = "output\\image\\" + name_mode;
 				const char* foler_name = folder_name_string.c_str();
@@ -334,7 +414,7 @@ int main()
 						if (point_num_per_color[cam] != 0) dev_pointnum[cam][i] = dev_pointnum[cam][i] / (float)point_num_per_color[cam];
 					}
 				}
-
+				cout << 1 << endl;
 				fout_dev << "pointNum" << "\n";
 				for (int i = 0; i < total_num_cameras; i++)
 					fout_dev << "color" << i + 1 << "," << point_num_per_color[i] << "\n";
@@ -359,10 +439,12 @@ int main()
 				for (int i = 0; i < full_color_dev.size(); i++)
 					fout_dev << i * 5 << "-" << (i + 1) * 5 << "," << full_color_dev[i] << "\n";
 				fout_dev << "\n";
+				cout << 2 << endl;
 
 				dev_pointnum.clear();
 				point_num_per_color.clear();
 				full_color_dev.clear();
+				cout << 3 << endl;
 
 				vector<vector<float>>().swap(dev_pointnum);
 				vector<int>().swap(point_num_per_color);
@@ -371,12 +453,14 @@ int main()
 				fout_data << total_ppc_size << "," << 100 - ((float)total_ppc_size / (_width * _height * total_num_cameras) * 100) << "%," <<
 					Cube_size[0] << "," << Cube_size[1] << "," << Cube_size[2] << "," <<
 					cube_size[0] << "," << cube_size[1] << "," << cube_size[2] << ",";
+				cout << 4 << endl;
 
 				fout_data << "\n\n";
 				if (proj_mode == 0) fout_data << "projection" << "\n";
 				else if (proj_mode == 1) fout_data << "back_projection" << "\n";
 				fout_data << "making ppc time,projection time per view\n";
 				fout_data << making_ppc_all_time << "," << projection_time_per_view << "\n\n";
+				cout << 5 << endl;
 
 				map<int, int> num_holes_p_map, num_holes_h_map;
 				map<int, float> psnrs_p_1_map, psnrs_p_2_map, psnrs_p_3_map, psnrs_h_1_map, psnrs_h_2_map, psnrs_h_3_map;
@@ -391,6 +475,7 @@ int main()
 					psnrs_h_2_map.insert(make_pair(camera_order[i], psnrs_h_2[i]));
 					psnrs_h_3_map.insert(make_pair(camera_order[i], psnrs_h_3[i]));
 				}
+				cout << 6 << endl;
 
 				Mat proj_viewImg, filled_viewImg;
 				int count_it = 0;
@@ -437,6 +522,8 @@ int main()
 				for (map<int, float>::iterator it = psnrs_h_3_map.begin(); it != psnrs_h_3_map.end(); it++) {
 					fout_data << "cam" << count_it++ << "," << it->second << "\n";
 				}
+				cout << 7 << endl;
+
 				count_it = 0;
 				fout_data << "\n\n";
 				fout_data.close();
