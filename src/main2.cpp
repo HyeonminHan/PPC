@@ -67,7 +67,7 @@ int main()
 #endif
 
 #ifdef TEST
-	vector<int> datas = { 5, 10 };
+	vector<int> datas = { 4, 10 };
 	for (int data_i = 0; data_i < datas.size(); data_i++) {
 		data_mode = datas[data_i];
 #endif
@@ -272,22 +272,20 @@ int main()
 					clock_t t7, t8;
 					for (int cam = 0; cam < total_num_cameras; cam++) {
 						cout << cam << "th pointcloud is being projected ..." << endl;
-						int nNeighbor = 4;
-						int window_size = 2;
 
 						//execute projection of ppc to each view
 						t7 = clock();
 						perform_projection(cam, cur_ppc_size, projection_imgs[cam], is_hole_proj_imgs[cam], depth_value_imgs[cam]);
 						is_hole_filled_imgs[cam] = is_hole_proj_imgs[cam].clone();
-						holefilling_per_viewpoint(projection_imgs[cam], filled_imgs[cam], is_hole_filled_imgs[cam], window_size);
+						//holefilling_per_viewpoint(projection_imgs[cam], filled_imgs[cam], is_hole_filled_imgs[cam], window_size);
 						t8 = clock();
 
 						cout << "projection and hole filling one view time : " << (t8 - t7) / CLOCKS_PER_SEC << endl;
 						cout << "---------------------------------" << endl;
 					}
 #ifdef TEST
-					making_ppc_all_time += (t14 - t13) / CLOCKS_PER_SEC;
-					projection_time_per_view += (t8 - t7) / CLOCKS_PER_SEC;
+					making_ppc_all_time += (t14 - t13) ;
+					projection_time_per_view += (t8 - t7);
 
 					//YUVdev 계산
 					clock_t t11 = clock();
@@ -296,8 +294,13 @@ int main()
 					cout << "calc_YUV_stddev_global time : " << (t12 - t11) / CLOCKS_PER_SEC << endl;
 #endif
 				}
+				int window_size = 2;
+
+				for (int cam = 0; cam < total_num_cameras; cam++)
+					holefilling_per_viewpoint(projection_imgs[cam], filled_imgs[cam], is_hole_filled_imgs[cam], window_size);
+
 				clock_t t6 = clock();
-				cout << "make ppc and projection final time : " << (t6 - t1) / CLOCKS_PER_SEC << endl << endl;
+				cout << "make ppc and projection final time : " << (t6 - t1) / CLOCKS_PER_SEC << "s\t" << (t6 - t1) << "ms" << endl << endl;
 				cout << "total_ppc_size : " << total_ppc_size << endl;
 				printPSNRWithoutBlackPixel_RGB(color_imgs, projection_imgs, is_hole_proj_imgs, psnrs_p_1, psnrs_p_2, psnrs_p_3, num_holes_p);
 				printPSNRWithBlackPixel_RGB(color_imgs, filled_imgs, is_hole_filled_imgs, psnrs_h_1, psnrs_h_2, psnrs_h_3, num_holes_h);
@@ -331,10 +334,13 @@ int main()
 						if (point_num_per_color[cam] != 0) dev_pointnum[cam][i] = dev_pointnum[cam][i] / (float)point_num_per_color[cam];
 					}
 				}
+				int total_point_num_per_color = 0;
+				for (int i = 0; i < total_num_cameras; i++)
+					total_point_num_per_color += point_num_per_color[i];
 
 				fout_dev << "pointNum" << "\n";
 				for (int i = 0; i < total_num_cameras; i++)
-					fout_dev << "color" << i + 1 << "," << point_num_per_color[i] << "\n";
+					fout_dev << "color" << i + 1 << "," << point_num_per_color[i] << "," << point_num_per_color[i] / (float)total_point_num_per_color * 100 << "\n";
 				fout_dev << "\n";
 
 				fout_dev << "Y dev" << "\n";
@@ -354,7 +360,7 @@ int main()
 
 				fout_dev << "# point per color dev of full color " << "\n";
 				for (int i = 0; i < full_color_dev.size(); i++)
-					fout_dev << i * 5 << "-" << (i + 1) * 5 << "," << full_color_dev[i] << "\n";
+					fout_dev << i * 5 << "-" << (i + 1) * 5 << "," << full_color_dev[i] << "," << full_color_dev[i] / (float)point_num_per_color[total_num_cameras - 1] *100<< "\n";
 				fout_dev << "\n";
 
 				dev_pointnum.clear();
@@ -373,7 +379,7 @@ int main()
 				if (proj_mode == 0) fout_data << "projection" << "\n";
 				else if (proj_mode == 1) fout_data << "back_projection" << "\n";
 				fout_data << "making ppc time,projection time per view\n";
-				fout_data << making_ppc_all_time << "," << projection_time_per_view << "\n\n";
+				fout_data << making_ppc_all_time / CLOCKS_PER_SEC << "," << projection_time_per_view / CLOCKS_PER_SEC <<  "\n\n";
 
 				map<int, int> num_holes_p_map, num_holes_h_map;
 				map<int, float> psnrs_p_1_map, psnrs_p_2_map, psnrs_p_3_map, psnrs_h_1_map, psnrs_h_2_map, psnrs_h_3_map;
