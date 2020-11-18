@@ -67,7 +67,13 @@ int main()
 #endif
 
 #ifdef TEST
-	vector<int> datas = { 4, 10 };
+	
+	
+	///////////////////here////////////////////
+	vector<int> datas = { 4,5,6,7,8,9,10,11,12,13 };
+	////////////////////////////////////////////
+
+
 	for (int data_i = 0; data_i < datas.size(); data_i++) {
 		data_mode = datas[data_i];
 #endif
@@ -110,16 +116,28 @@ int main()
 		int frame_num = 1;
 
 #ifdef TEST
-		vector<int> voxel_div_nums = { 1024, 8192 };
+		/////////////////////////here//////////////////////////
+		vector<int> voxel_div_nums = { 8192, 4096 };
 		for (int voxel_i = 0; voxel_i < voxel_div_nums.size(); voxel_i++) {
-			voxel_div_num = voxel_div_nums[voxel_i];
 
+			bool modifiedBatch_mode = 1; //0 - pure modified batch, 1 - DCT modified batch
+			int valid_dct_y_pixelNN = 4;
+			int valid_dct_uv_pixelNN = 4;
+			int backgroundfilling_mode = 0; // 0 - average, 1 - laplacian
+		/////////////////////////////////////////////////////////////
+
+
+			voxel_div_num = voxel_div_nums[voxel_i];
 			cout << " ============================= " << endl;
 			cout << "          view_num  " << view_num << endl;
 			cout << " ============================= " << endl;
 			cout << "          data_mode  " << data_mode << endl;
 			cout << " ============================= " << endl;
 			cout << "      voxel_div_num  " << voxel_div_num << endl;
+			cout << " ============================= " << endl;
+			cout << "    modifiedBatch_mode  " << modifiedBatch_mode << endl;
+			cout << " ============================= " << endl;
+			cout << "    valid_dct_y_pixelNN  " << valid_dct_y_pixelNN << endl;
 			cout << " ============================= " << endl;
 
 			ofstream fout_data;
@@ -155,9 +173,14 @@ int main()
 			else if (colorspace == 1) name_colorspace = "HSV";
 			else if (colorspace == 2) name_colorspace = "BGR";
 
+			string is_dct;
+			if (modifiedBatch_mode == 0) is_dct = "";
+			else if (modifiedBatch_mode == 1) is_dct = "_dct_Y" + to_string(valid_dct_uv_pixelNN) + to_string(valid_dct_uv_pixelNN);
+
+
 			string version_ = to_string(version).substr(0, 3);
-			string name_data = "output\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + name_colorspace + "_" + to_string(voxel_div_num) + "_data.csv";
-			string name_dev = "output\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + name_colorspace + "_" + to_string(voxel_div_num) + "_dev.csv";
+			string name_data = "output\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + name_colorspace + "_" + to_string(voxel_div_num) +  is_dct + "_data.csv";
+			string name_dev = "output\\" + version_ + "_" + name_mode + "_" + name_ppc + "_" + name_colorspace + "_" + to_string(voxel_div_num) + is_dct + "_dev.csv";
 
 			fout_data.open(name_data);
 			fout_dev.open(name_dev);
@@ -261,71 +284,28 @@ int main()
 				int cnt_spe = 0;
 				int cnt_lam = 0;
 
-				//while (1) {
-				//	/*cin >> x >> y;
-				//	if (!cin) {
-				//		cin.clear();
-				//		cin.ignore(256, '\n');
-				//		continue;
-				//	}
-				//	if (x < 0 || y < 0 || x > _width || y > _height) {
-				//		cerr << "out of range" << endl;
-				//		cin.clear();
-				//		cin.ignore(256, '\n');
-				//		continue;
-				//	}*/
-				//	//Mat ref_img = color_imgs[0].clone();
-				//	Mat ref_img_spe = color_imgs[0].clone();
-				//	Mat ref_img_lam = color_imgs[0].clone();
-				//	cvtColor(ref_img_spe, ref_img_spe, CV_YUV2BGR);
-				//	cvtColor(ref_img_lam, ref_img_lam, CV_YUV2BGR);
-				//	
-				//	for (int j = 0; j < 100; j++) {//1080
-				//		for (int i = 0; i < 100; i++) {//1920
-				//			x = i * 3;
-				//			y = j * 2;
-
-				//			color_imaging2(x, y, color_imgs, depth_imgs, min, Cube_size, cube_size, voxel_div_num, 30, ref_img_spe, ref_img_lam, avr_psnrs_spe, avr_psnrs_lam, cnt_spe, cnt_lam);
-				//			//color_imaging(x, y, color_imgs, depth_imgs, min, Cube_size, cube_size, voxel_div_num, 30, ref_img);
-				//		}
-				//	}
-
-				//	avr_psnrs_spe[0] /= cnt_spe;
-				//	avr_psnrs_spe[1] /= cnt_spe;
-				//	avr_psnrs_spe[2] /= cnt_spe;
-
-				//	avr_psnrs_lam[0] /= cnt_lam;
-				//	avr_psnrs_lam[1] /= cnt_lam;
-				//	avr_psnrs_lam[2] /= cnt_lam;
-
-				//	cout << "avr_psnrs_lam : " << avr_psnrs_lam[0] << "\t" << avr_psnrs_lam[1] << "\t" << avr_psnrs_lam[2] << endl;
-				//	cout << "avr_psnrs_spe : " << avr_psnrs_spe[0] << "\t" << avr_psnrs_spe[1] << "\t" << avr_psnrs_spe[2] << endl;
-				//	//imwrite("output\\ref_img.jpg", ref_img);
-				//	imwrite("output\\ref_img_spe.jpg", ref_img_spe);
-				//	imwrite("output\\ref_img_lam.jpg", ref_img_lam);
-				//	break;
-				//}
-
-
-				//exit(1);
 
 				clock_t t5 = clock();
 				while (end_ppc_generation == false) {
+					
 
 					clock_t t13 = clock();
-					make_PPC_modified_batch(iteration, max_ppc_size, min, voxel_div_num, color_imgs, depth_imgs, Cube_size, cube_size, valid_cube_indices, end_ppc_generation, cur_ppc_size);
+					if(modifiedBatch_mode == 0)
+						make_PPC_modified_batch(iteration, max_ppc_size, min, voxel_div_num, color_imgs, depth_imgs, Cube_size, cube_size, valid_cube_indices, end_ppc_generation, cur_ppc_size);
+					else if (modifiedBatch_mode == 1)
+						make_PPC_modified_batch_DCT(iteration, max_ppc_size, min, voxel_div_num, color_imgs, depth_imgs, Cube_size, cube_size, valid_cube_indices, end_ppc_generation, cur_ppc_size,
+							valid_dct_y_pixelNN, valid_dct_uv_pixelNN, backgroundfilling_mode);
 					clock_t t14 = clock();
 					cout << "make_PPC_modified_batch time : " << (t14 - t13) / CLOCKS_PER_SEC << endl << endl;
 
 					total_ppc_size += cur_ppc_size;
 					iteration++;
 
+
 					//perform_projection
 					clock_t t7, t8;
 					for (int cam = 0; cam < total_num_cameras; cam++) {
 						cout << cam << "th pointcloud is being projected ..." << endl;
-						int nNeighbor = 4;
-						
 
 						//execute projection of ppc to each view
 						t7 = clock();
@@ -338,8 +318,8 @@ int main()
 						cout << "---------------------------------" << endl;
 					}
 #ifdef TEST
-					making_ppc_all_time += (t14 - t13) / CLOCKS_PER_SEC;
-					projection_time_per_view += (t8 - t7) / CLOCKS_PER_SEC;
+					making_ppc_all_time += (t14 - t13) ;
+					projection_time_per_view += (t8 - t7);
 
 					//YUVdev 계산
 					clock_t t11 = clock();
@@ -348,43 +328,18 @@ int main()
 					cout << "calc_YUV_stddev_global time : " << (t12 - t11) / CLOCKS_PER_SEC << endl;
 #endif
 				}
-				clock_t t6 = clock();
-				cout << "make ppc and projection final time : " << (t6 - t1) / CLOCKS_PER_SEC << endl << endl;
-				PointCloud<PointXYZRGB>::Ptr pc(new PointCloud<PointXYZRGB>);
 				int window_size = 2;
-				for(int i = 0; i< total_num_cameras; i++)
-					holefilling_per_viewpoint(projection_imgs[i], filled_imgs[i], is_hole_filled_imgs[i], window_size);
-				//
-				//for (int i = 0; i < cur_ppc_size; i++) {
-				//	PointXYZRGB p;
 
-				//	if (ppc_vec[i].CheckOcclusion(0)) continue;
-				//	float* geo = ppc_vec[i].GetGeometry();
-				//	Vec3b color = ppc_vec[i].GetColor(0);
+				for (int cam = 0; cam < total_num_cameras; cam++)
+					holefilling_per_viewpoint(projection_imgs[cam], filled_imgs[cam], is_hole_filled_imgs[cam], window_size);
 
-				//	p.x = geo[0];
-				//	p.y = geo[1];
-				//	p.z = geo[2];
-				//	p.b = color[0];
-				//	p.g = color[1];
-				//	p.r = color[2];
+				clock_t t6 = clock();
+				cout << "make ppc and projection final time : " << (t6 - t1) / CLOCKS_PER_SEC << "s\t" << (t6 - t1) << "ms" << endl << endl;
+				cout << "total_ppc_size : " << total_ppc_size << endl;
+				printPSNRWithoutBlackPixel_RGB(color_imgs, projection_imgs, is_hole_proj_imgs, psnrs_p_1, psnrs_p_2, psnrs_p_3, num_holes_p);
+				printPSNRWithBlackPixel_RGB(color_imgs, filled_imgs, is_hole_filled_imgs, psnrs_h_1, psnrs_h_2, psnrs_h_3, num_holes_h);
 
-				//	pc->points.push_back(p);
-				//}
-
-				//view_PC_yuvTorgb(pc);
-
-				//Mat proj_viewImg, filled_viewImg;
-
-				//cvtColor(projection_imgs[0], proj_viewImg, CV_YUV2BGR);
-				//cvtColor(filled_imgs[0], filled_viewImg, CV_YUV2BGR);
-
-				//imwrite("projection_img.png", proj_viewImg);
-				//imwrite("filled_imgs.png", filled_viewImg);
-				////waitKey(0);
-
-				//printPSNRWithoutBlackPixel_RGB(color_imgs, projection_imgs, is_hole_proj_imgs, psnrs_p_1, psnrs_p_2, psnrs_p_3, num_holes_p);
-				//printPSNRWithBlackPixel_RGB(color_imgs, filled_imgs, is_hole_filled_imgs, psnrs_h_1, psnrs_h_2, psnrs_h_3, num_holes_h);
+				//save_ppc_v1(total_ppc_size, "output\\ppc_binary1.bin");
 
 #ifdef TEST			
 
@@ -414,10 +369,13 @@ int main()
 						if (point_num_per_color[cam] != 0) dev_pointnum[cam][i] = dev_pointnum[cam][i] / (float)point_num_per_color[cam];
 					}
 				}
-				cout << 1 << endl;
+				int total_point_num_per_color = 0;
+				for (int i = 0; i < total_num_cameras; i++)
+					total_point_num_per_color += point_num_per_color[i];
+
 				fout_dev << "pointNum" << "\n";
 				for (int i = 0; i < total_num_cameras; i++)
-					fout_dev << "color" << i + 1 << "," << point_num_per_color[i] << "\n";
+					fout_dev << "color" << i + 1 << "," << point_num_per_color[i] << "," << point_num_per_color[i] / (float)total_point_num_per_color * 100 << "\n";
 				fout_dev << "\n";
 
 				fout_dev << "Y dev" << "\n";
@@ -437,7 +395,7 @@ int main()
 
 				fout_dev << "# point per color dev of full color " << "\n";
 				for (int i = 0; i < full_color_dev.size(); i++)
-					fout_dev << i * 5 << "-" << (i + 1) * 5 << "," << full_color_dev[i] << "\n";
+					fout_dev << i * 5 << "-" << (i + 1) * 5 << "," << full_color_dev[i] << "," << full_color_dev[i] / (float)point_num_per_color[total_num_cameras - 1] *100<< "\n";
 				fout_dev << "\n";
 				cout << 2 << endl;
 
@@ -459,8 +417,7 @@ int main()
 				if (proj_mode == 0) fout_data << "projection" << "\n";
 				else if (proj_mode == 1) fout_data << "back_projection" << "\n";
 				fout_data << "making ppc time,projection time per view\n";
-				fout_data << making_ppc_all_time << "," << projection_time_per_view << "\n\n";
-				cout << 5 << endl;
+				fout_data << making_ppc_all_time / CLOCKS_PER_SEC << "," << projection_time_per_view / CLOCKS_PER_SEC <<  "\n\n";
 
 				map<int, int> num_holes_p_map, num_holes_h_map;
 				map<int, float> psnrs_p_1_map, psnrs_p_2_map, psnrs_p_3_map, psnrs_h_1_map, psnrs_h_2_map, psnrs_h_3_map;

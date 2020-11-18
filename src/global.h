@@ -81,6 +81,8 @@ public:
 	virtual Vec3b GetColor(int idx) { return { 0, 0, 0 }; }
 	virtual vector<uchar> GetVU() { return { 0 }; }
 	virtual vector<uchar> GetY() { return { 0 }; }
+	virtual vector<uchar> GetU() { return { 0 }; }
+	virtual vector<uchar> GetV() { return { 0 }; }
 	virtual uchar GetrefV() { return 0; }
 	virtual uchar GetrefU() { return 0; }
 	virtual float* GetGeometry() { return NULL; }
@@ -92,16 +94,16 @@ public:
 	virtual void SetColor(Vec3b color, int idx) {}
 	virtual void SetColor(uchar v_, uchar u_, uchar y_, int idx) {}
 	virtual void SetColor(uchar refv, uchar refu, vector<uchar> vu, vector<uchar> y) {}
+	virtual void SetColor(vector<uchar> v, vector<uchar> u, vector<uchar> y, vector<bool> occ) {}
 	virtual void SetOcclusionZero() {}
 	virtual void SetZero() {}
 	//v2.2
 	virtual int GetColorNum() { return 0; }
-	virtual uchar GetV() { return 0; }
-	virtual uchar GetU() { return 0; }
+	virtual uchar GetavrV() { return 0; }
+	virtual uchar GetavrU() { return 0; }
 	virtual vector<bool> GetOcclusion() { return { false }; }
 	virtual void SetColor(PointXYZRGB point, int idx) {}
 	virtual void SetColor(uchar avrv, uchar avru, vector<uchar> y, vector<bool> occ) {}
-
 };
 
 class PPC_v1 : public PPC {
@@ -188,6 +190,27 @@ public:
 		Y[idx] = point.b;
 		occlusion[idx] = true;
 	}
+
+	void SetColor(vector<uchar> v, vector<uchar> u, vector<uchar> y, vector<bool> occ)
+	{
+		Y = y;
+		U = u;
+		V = v;
+		occlusion = occ;
+	}
+
+	vector<uchar> GetY() {
+		return Y;
+	}
+
+	vector<uchar> GetU() {
+		return U;
+	}
+
+	vector<uchar> GetV() {
+		return V;
+	}
+
 };
 
 class PPC_v2_1 : public PPC {
@@ -385,12 +408,12 @@ public:
 		return !occlusion[idx];
 	}
 
-	uchar GetV() {
+	uchar GetavrV() {
 		//uchar avrV = new uchar[1];
 		return avrV;
 	}
 
-	uchar GetU() {
+	uchar GetavrU() {
 		//uchar* avrU = new uchar[1];
 		return avrU;
 	}

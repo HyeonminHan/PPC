@@ -150,7 +150,11 @@ void holefilling_per_viewpoint(Mat colorimg,
 void save_ppc(vector<PPC*> ppc, 
 	string filename);
 
+void save_ppc_v1(int total_ppc_size, string filename);
+
 vector<PPC*> load_ppc(string filename);
+
+void load_ppc_v1(string filename, int& total_ppc_size);
 
 void calc_YUV_stddev_global(int cur_ppc_size, 
 	vector<vector<float>>& dev_pointnum, 
@@ -163,3 +167,19 @@ void color_imaging2(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat
 
 void write_yuv(int x, int y, Mat colors, Mat occlusion, Mat& ref_img);
 void write_yuv2(int x, int y, Mat colors, Mat occlusion, Mat colors_zoom, Mat& ref_img, string name);
+
+void make_PPC_modified_batch_DCT(
+	int iteration,
+	int max_ppc_size,
+	vector<float> min,
+	int voxel_div_num,
+	vector<Mat> color_imgs,
+	vector<Mat> depth_imgs,
+	vector<float>& space_size,
+	vector<float>& voxel_size,
+	set<unsigned long long>& valid_cube_indices,
+	bool& end_ppc_generation,
+	int& cur_ppc_size,
+	int dct_y_valid_pixnum=8,
+	int dct_uv_valid_pixnum=4,
+	int backgroundfilling_mode=0);

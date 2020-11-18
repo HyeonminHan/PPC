@@ -1226,6 +1226,264 @@ void make_PPC_modified_batch(
 	cout << "make_PPC_modified_batch is done..." << endl;
 }
 
+Mat perform_dct_idct_img(
+	Mat img_gray,
+	int valid_pixelNN) {
+
+	int tile_size = 10;
+	Mat img_dct, idct_img; 
+	Mat colors_y_zoom = Mat::zeros(sqrt(total_num_cameras) * tile_size, sqrt(total_num_cameras) * tile_size, CV_8UC1);
+	Mat occlusions_zoom = Mat::zeros(sqrt(total_num_cameras) * tile_size, sqrt(total_num_cameras) * tile_size, CV_8U);
+
+	img_gray.convertTo(img_dct, CV_32F);
+
+	//perform DCT
+	dct(img_dct, img_dct);
+
+	for (int i = 0; i < img_dct.rows; i++) {
+		for (int j = 0; j < img_dct.cols; j++) {
+			if (i < valid_pixelNN && j < valid_pixelNN) continue;
+			img_dct.at<float>(i, j) = 0;
+		}
+	}
+
+	dct(img_dct, idct_img, DCT_INVERSE);
+
+	idct_img.convertTo(idct_img, CV_8U);
+	return idct_img;
+}
+
+void make_PPC_modified_batch_DCT(
+	int iteration,
+	int max_ppc_size,
+	vector<float> min,
+	int voxel_div_num,
+	vector<Mat> color_imgs,
+	vector<Mat> depth_imgs,
+	vector<float>& space_size,
+	vector<float>& voxel_size,
+	set<unsigned long long>& valid_cube_indices,
+	bool& end_ppc_generation,
+	int& cur_ppc_size,
+	int dct_y_valid_pixnum,
+	int dct_uv_valid_pixnum,
+	int backgroundfilling_mode) {
+
+	cout << "make_PPC_modified_batch is proceeding..." << endl;
+	int cnt = 0;
+
+	unsigned long long voxel_div_num_ = voxel_div_num;
+	int x_idx, y_idx, z_idx;
+	float X, Y, Z;
+
+	int u, v;
+	double w, dist_point2camera, w_origin, dist_origin;
+	int cnt_first = 0;
+
+	int ppc_idx = 0;
+	double depth_threshold = sqrt((voxel_size[0] * voxel_size[0]) + (voxel_size[1] * voxel_size[1]) + (voxel_size[2] * voxel_size[2]));
+
+	set<unsigned long long>::iterator cube_index_iter;
+
+	cube_index_iter = valid_cube_indices.begin();
+	for (int i = 0; i < max_ppc_size * iteration; i++) cube_index_iter++;
+
+	set<unsigned long long>::iterator end_iter = valid_cube_indices.end();
+	int cube_count = 0;
+
+	vector<int> order_vec(total_num_cameras);  // 순차 2 와리가리
+	vector<int> order_vec2(total_num_cameras); // 와리가리 2 순차
+
+	for (int i = 0; i < total_num_cameras; i++) {
+		if (i <= total_num_cameras / 2) {
+			order_vec[i] = (total_num_cameras / 2 - i) * 2;
+		}
+		else {
+			order_vec[i] = (i - total_num_cameras / 2) * 2 - 1;
+		}
+	}
+
+	for (int i = 0; i < total_num_cameras; i++) {
+		if (i % 2 == 0) {
+			order_vec2[i] = total_num_cameras / 2 - (i / 2);
+		}
+		else {
+			order_vec2[i] = total_num_cameras / 2 + ((i + 1) / 2);
+		}
+	}
+
+
+	while (1) {
+		if (cube_count == max_ppc_size) {
+			cur_ppc_size = ppc_idx;
+			break;
+		}
+
+		if (cube_index_iter == end_iter) {
+			cur_ppc_size = ppc_idx;
+			end_ppc_generation = true;
+			break;
+		}
+
+		if (ppc_idx % 1000000 == 0) cout << ppc_idx << "th ppc is being made..." << endl;
+		unsigned long long cube_index = *cube_index_iter;
+		x_idx = int(cube_index / (voxel_div_num_ * voxel_div_num_));
+		y_idx = int((cube_index % (voxel_div_num_ * voxel_div_num_)) / voxel_div_num);
+		z_idx = int((cube_index % (voxel_div_num_ * voxel_div_num_)) % voxel_div_num);
+
+		X = (float(x_idx) / (voxel_div_num - 1) * space_size[0]) + min[0] + (voxel_size[0] / 2);
+		Y = (float(y_idx) / (voxel_div_num - 1) * space_size[1]) + min[1] + (voxel_size[1] / 2);
+		Z = (float(z_idx) / (voxel_div_num - 1) * space_size[2]) + min[2] + (voxel_size[2] / 2);
+
+		bool is_first_color = true;
+		cnt++;
+
+
+		int num = 0;
+		vector<ushort> pixel_sum(3, 0);
+		int pixel_count = 0;
+
+		Mat colors = Mat::zeros(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC3);
+		Mat colors_dct_y = Mat::zeros(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
+		Mat colors_dct_u = Mat::zeros(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
+		Mat colors_dct_v = Mat::zeros(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
+
+		Mat occlusion_dct(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
+
+		for (int cam = 0; cam < total_num_cameras; cam++) {
+
+			w = projection_XYZ_2_UV(
+				m_CalibParams[cam].m_ProjMatrix,
+				(double)X,
+				(double)Y,
+				(double)Z,
+				u,
+				v);
+
+			//복셀의 중점과 image plane과의 거리값 계산
+			dist_point2camera = find_point_dist(w, cam);
+			if ((u < 0) || (v < 0) || (u > _width - 1) || (v > _height - 1)) continue;
+
+			//원본거리값 계산
+			double X_origin, Y_origin, Z_origin;
+			switch (data_mode) {
+			case 0:
+				Z_origin = depth_level_2_Z(depth_imgs[cam].at<Vec3b>(v, u)[0]);
+				break;
+
+			case 1: case 2: case 3:
+				Z_origin = depth_level_2_Z_s(depth_imgs[cam].at<Vec3s>(v, u)[0]);
+				break;
+
+			case 4: case 5: case 6: case 7: case 8: case 9:
+			case 10: case 11: case 12: case 13:
+				Z_origin = depth_level_2_Z_s_direct(depth_imgs[cam].at<ushort>(v, u));
+				break;
+			}
+
+			if (!data_mode) projection_UVZ_2_XY_PC(m_CalibParams[cam].m_ProjMatrix, u, v, Z_origin, &X_origin, &Y_origin);
+			else Z_origin = MVG(m_CalibParams[cam].m_K, m_CalibParams[cam].m_RotMatrix, m_CalibParams[cam].m_Trans, u, v, Z_origin, &X_origin, &Y_origin);
+
+			w_origin = m_CalibParams[cam].m_ProjMatrix(2, 0) * X_origin + m_CalibParams[cam].m_ProjMatrix(2, 1) * Y_origin + m_CalibParams[cam].m_ProjMatrix(2, 2) * Z_origin + m_CalibParams[cam].m_ProjMatrix(2, 3);
+			dist_origin = find_point_dist(w_origin, cam);
+
+			int i = order_vec2[cam] / int(sqrt(total_num_cameras));
+			int j = order_vec2[cam] % int(sqrt(total_num_cameras));
+
+			if (abs(dist_origin - dist_point2camera) < depth_threshold) {
+				Vec3b color = color_imgs[cam].at<Vec3b>(v, u);
+				
+				colors.at<Vec3b>(i, j) = color;
+
+				pixel_sum[0] += color[0];
+				pixel_sum[1] += color[1];
+				pixel_sum[2] += color[2];
+				pixel_count++;
+
+				colors.at<Vec3b>(i, j) = color;
+				colors_dct_y.at<uchar>(i, j) = color[0];
+				colors_dct_u.at<uchar>(i, j) = color[1];
+				colors_dct_v.at<uchar>(i, j) = color[2];
+
+				occlusion_dct.at<bool>(i, j) = false;
+			}
+			else {
+				occlusion_dct.at<bool>(i, j) = true;
+			}
+		}
+		if (pixel_count == 0) {
+			cube_index_iter++;
+			cube_count++;
+			continue;
+		}
+
+		if (backgroundfilling_mode == 0) {
+			//occlusion 픽셀에 전체색의 평균값할당
+			for (int i = 0; i < sqrt(total_num_cameras); i++) {
+				for (int j = 0; j < sqrt(total_num_cameras); j++) {
+
+					bool is_occ = occlusion_dct.at<bool>(i, j);
+					if (is_occ) {
+						colors.at<Vec3b>(i, j)[0] = uchar(pixel_sum[0] / pixel_count);
+						colors.at<Vec3b>(i, j)[1] = uchar(pixel_sum[1] / pixel_count);
+						colors.at<Vec3b>(i, j)[2] = uchar(pixel_sum[2] / pixel_count);
+						colors_dct_y.at<uchar>(i, j) = uchar(pixel_sum[0] / pixel_count);
+						colors_dct_u.at<uchar>(i, j) = uchar(pixel_sum[1] / pixel_count);
+						colors_dct_v.at<uchar>(i, j) = uchar(pixel_sum[2] / pixel_count);
+					}
+				}
+			}
+		}
+		else {//laplacian
+			;
+		}
+
+		Mat y_idct, u_idct, v_idct, colors_idct;
+		Mat color_idct[3];
+
+		color_idct[0] = perform_dct_idct_img(colors_dct_y, dct_y_valid_pixnum);
+		color_idct[1] = perform_dct_idct_img(colors_dct_u, dct_uv_valid_pixnum);
+		color_idct[2] = perform_dct_idct_img(colors_dct_v, dct_uv_valid_pixnum);
+		//colors zeros
+
+		merge(color_idct, 3, colors_idct);
+
+		for (int cam = 0; cam < total_num_cameras; cam++) {
+
+			int i = cam / int(sqrt(total_num_cameras));
+			int j = cam % int(sqrt(total_num_cameras));
+
+			if (is_first_color) {
+					float geo[3] = { X, Y, Z };
+					if (iteration == 0) {
+						ppc_vec[ppc_idx] = PPC_v1();
+					}
+					else {
+						ppc_vec[ppc_idx].SetZero();
+					}
+					ppc_vec[ppc_idx].SetGeometry(geo);
+					ppc_vec[ppc_idx].SetColor(colors_idct.at<Vec3b>(i, j), order_vec[cam]);
+					is_first_color = false;
+			}
+			else {
+				ppc_vec[ppc_idx].SetColor(colors_idct.at<Vec3b>(i, j), order_vec[cam]);
+			}
+		}
+
+		//calcPSNRWithBlackPixel_YUV_per_viewpoint_inDCT(colors, colors_idct, occlusion_dct);
+		//calcPSNRWithBlackPixel_RGB_per_viewpoint_inDCT(colors, colors_idct, occlusion_dct);
+
+		if (!is_first_color) {
+			ppc_idx++;
+		}
+
+		cube_index_iter++;
+		cube_count++;
+	}
+	cout << "ppc size : " << ppc_idx << endl;
+	cout << "make_PPC_modified_batch is done..." << endl;
+}
+
 vector<PointCloud<PointXYZRGB>::Ptr> make_all_PC(
 	vector<Mat> color_imgs,
 	vector<Mat> depth_imgs) {
@@ -1634,7 +1892,47 @@ void save_ppc(vector<PPC*> ppc, string filename) {
 		fout.write((char*)&geo[1], sizeof(float));
 		fout.write((char*)&geo[2], sizeof(float));
 
-		if (version == 2.1) {
+		if (version == 1.0) {
+			vector<uchar> V = (*vit)->GetV();
+			vector<uchar> U = (*vit)->GetU();
+			vector<uchar> Y = (*vit)->GetY();
+			vector<bool> occ = (*vit)->GetOcclusion();
+
+			for (int i = 0; i < total_num_cameras; i++) {
+				fout.write((char*)&V[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fout.write((char*)&U[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fout.write((char*)&Y[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				char* temp;
+				if (i % 8 == 0) {
+					temp = new char;
+					*temp = occ[i];
+				}
+				else if (i % 8 == 7) {
+					*temp <<= 1;
+					*temp |= occ[i];
+					fout.write((char*)temp, sizeof(char));
+					delete temp;
+				}
+				else if (i == total_num_cameras - 1) {
+					*temp <<= 1;
+					*temp |= occ[i];
+					*temp <<= 8 - (total_num_cameras % 8);
+					fout.write((char*)temp, sizeof(char));
+					delete temp;
+				}
+				else {
+					*temp <<= 1;
+					*temp |= occ[i];
+				}
+			}
+		}
+		else if (version == 2.1) {
 			uchar refV = (*vit)->GetrefV();
 			uchar refU = (*vit)->GetrefU();
 			fout.write((char*)&refV, sizeof(uchar));
@@ -1651,8 +1949,8 @@ void save_ppc(vector<PPC*> ppc, string filename) {
 			}
 		}
 		else if (version == 2.2) {
-			uchar avrV = (*vit)->GetV();
-			uchar avrU = (*vit)->GetU();
+			uchar avrV = (*vit)->GetavrV();
+			uchar avrU = (*vit)->GetavrU();
 			fout.write((char*)&avrV, sizeof(uchar));
 			fout.write((char*)&avrU, sizeof(uchar));
 
@@ -1660,6 +1958,63 @@ void save_ppc(vector<PPC*> ppc, string filename) {
 			vector<bool> occ = (*vit)->GetOcclusion();
 
 			fout.write((char*)&Y[0], total_num_cameras * sizeof(uchar));
+			for (int i = 0; i < total_num_cameras; i++) {
+				char* temp;
+				if (i % 8 == 0) {
+					temp = new char;
+					*temp = occ[i];
+				}
+				else if (i % 8 == 7) {
+					*temp <<= 1;
+					*temp |= occ[i];
+					fout.write((char*)temp, sizeof(char));
+					delete temp;
+				}
+				else if (i == total_num_cameras - 1) {
+					*temp <<= 1;
+					*temp |= occ[i];
+					*temp <<= 8 - (total_num_cameras % 8);
+					fout.write((char*)temp, sizeof(char));
+					delete temp;
+				}
+				else {
+					*temp <<= 1;
+					*temp |= occ[i];
+				}
+			}
+		}
+	}
+
+	fout.close();
+	cout << "save pcc done..." << endl << endl;
+}
+
+void save_ppc_v1(int total_ppc_size, string filename) {
+
+	ofstream fout(filename, ios::binary);
+
+	for (int i = 0; i < total_ppc_size; i++) {
+		float* geo = new float(3);
+		geo = ppc_vec[i].GetGeometry();
+		fout.write((char*)&geo[0], sizeof(float));
+		fout.write((char*)&geo[1], sizeof(float));
+		fout.write((char*)&geo[2], sizeof(float));
+
+		if (version == 1.0) {
+			vector<uchar> V = ppc_vec[i].GetV();
+			vector<uchar> U = ppc_vec[i].GetU();
+			vector<uchar> Y = ppc_vec[i].GetY();
+			vector<bool> occ = ppc_vec[i].GetOcclusion();
+
+			for (int i = 0; i < total_num_cameras; i++) {
+				fout.write((char*)&V[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fout.write((char*)&U[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fout.write((char*)&Y[i], sizeof(uchar));
+			}
 			for (int i = 0; i < total_num_cameras; i++) {
 				char* temp;
 				if (i % 8 == 0) {
@@ -1706,7 +2061,52 @@ vector<PPC*> load_ppc(string filename) {
 		fin.read((char*)(&geo[2]), sizeof(float));
 		pc->SetGeometry(geo);
 
-		if (version == 2.1) {
+		if (version == 1.0) {
+
+			vector<uchar> V(total_num_cameras), U(total_num_cameras), Y(total_num_cameras);
+			vector<bool> occlusion(total_num_cameras);
+
+			for (int i = 0; i < total_num_cameras; i++) {
+				fin.read((char*)&V[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fin.read((char*)&U[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fin.read((char*)&Y[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				char* temp;
+				if (i % 8 == 0) {
+					temp = new char;
+					fin.read((char*)temp, sizeof(char));
+					unsigned char t = *temp & 128; //1000 0000
+					if (t == 128) {
+						occlusion[i] = true;
+					}
+					else occlusion[i] = false;
+					*temp <<= 1;
+				}
+				else if (i % 8 == 7 || i == total_num_frames - 1) {
+					unsigned char t = *temp & 128; //1000 0000
+					if (t == 128) {
+						occlusion[i] = true;
+					}
+					else occlusion[i] = false;
+					delete temp;
+				}
+				else {
+					unsigned char t = *temp & 128; //1000 0000
+					if (t == 128) {
+						occlusion[i] = true;
+					}
+					else occlusion[i] = false;
+					*temp <<= 1;
+				}
+			}
+			pc->SetColor(V, U, Y, occlusion);
+		}
+		else if (version == 2.1) {
 			uchar refV, refU;
 			fin.read((char*)(&refV), sizeof(uchar));
 			fin.read((char*)(&refU), sizeof(uchar));
@@ -1769,6 +2169,70 @@ vector<PPC*> load_ppc(string filename) {
 	fin.close();
 	cout << "load pcc done..." << endl << endl;
 	return vec_ppc;
+}
+
+void load_ppc_v1(string filename, int& total_ppc_size) {
+	ifstream fin(filename, ios::binary);
+
+	int cnt = 0;
+	while (!fin.eof()) {
+		if (version == 1.0) {
+			ppc_vec[cnt] = PPC_v1();
+
+			float* geo = (float*)malloc(3 * sizeof(float));
+			fin.read((char*)(&geo[0]), sizeof(float));
+			fin.read((char*)(&geo[1]), sizeof(float));
+			fin.read((char*)(&geo[2]), sizeof(float));
+			ppc_vec[cnt].SetGeometry(geo);
+
+			vector<uchar> V(total_num_cameras), U(total_num_cameras), Y(total_num_cameras);
+			vector<bool> occlusion(total_num_cameras);
+
+			for (int i = 0; i < total_num_cameras; i++) {
+				fin.read((char*)&V[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fin.read((char*)&U[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				fin.read((char*)&Y[i], sizeof(uchar));
+			}
+			for (int i = 0; i < total_num_cameras; i++) {
+				char* temp;
+				if (i % 8 == 0) {
+					temp = new char;
+					fin.read((char*)temp, sizeof(char));
+					unsigned char t = *temp & 128; //1000 0000
+					if (t == 128) {
+						occlusion[i] = true;
+					}
+					else occlusion[i] = false;
+					*temp <<= 1;
+				}
+				else if (i % 8 == 7 || i == total_num_cameras - 1) {
+					unsigned char t = *temp & 128; //1000 0000
+					if (t == 128) {
+						occlusion[i] = true;
+					}
+					else occlusion[i] = false;
+					delete temp;
+				}
+				else {
+					unsigned char t = *temp & 128; //1000 0000
+					if (t == 128) {
+						occlusion[i] = true;
+					}
+					else occlusion[i] = false;
+					*temp <<= 1;
+				}
+			}
+			ppc_vec[cnt].SetColor(V, U, Y, occlusion);
+			cnt++;
+		}
+	}
+	total_ppc_size = cnt;
+	fin.close();
+	cout << "load pcc done..." << endl << endl;
 }
 
 void calc_YUV_stddev_global(int cur_ppc_size, vector<vector<float>>& dev_pointnum, vector<int>& point_num_per_color, vector<int>& full_color_dev)
