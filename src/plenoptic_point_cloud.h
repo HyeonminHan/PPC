@@ -183,3 +183,21 @@ void make_PPC_modified_batch_DCT(
 	int dct_y_valid_pixnum=8,
 	int dct_uv_valid_pixnum=4,
 	int backgroundfilling_mode=0);
+
+void regionFill(
+	Mat* io_image,
+	Mat* in_mask,
+	Mat* in_downsized_image);
+
+void CreateCoarseLayer(
+	Mat* in_image,
+	Mat* out_mip,
+	Mat* in_occupancyMap,
+	Mat* out_mipOccupancyMap);
+
+void interpolate_background_w_laplacian(
+	Mat* in_image,
+	Mat* in_mask,
+	Mat* out_image);
+
+void imshow_zoomin(Mat result, int tile_size, string img_name);

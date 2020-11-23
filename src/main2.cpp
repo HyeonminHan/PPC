@@ -70,7 +70,7 @@ int main()
 	
 	
 	///////////////////here////////////////////
-	vector<int> datas = { 4,5,6,7,8,9,10,11,12,13 };
+	vector<int> datas = { 5,6,7,8,9,10,11,12,13 };
 	////////////////////////////////////////////
 
 
@@ -117,13 +117,13 @@ int main()
 
 #ifdef TEST
 		/////////////////////////here//////////////////////////
-		vector<int> voxel_div_nums = { 8192, 4096 };
+		vector<int> voxel_div_nums = { 1024,8192, 4096 };
 		for (int voxel_i = 0; voxel_i < voxel_div_nums.size(); voxel_i++) {
 
 			bool modifiedBatch_mode = 1; //0 - pure modified batch, 1 - DCT modified batch
 			int valid_dct_y_pixelNN = 4;
 			int valid_dct_uv_pixelNN = 4;
-			int backgroundfilling_mode = 0; // 0 - average, 1 - laplacian
+			int backgroundfilling_mode = 1; // 0 - average, 1 - laplacian
 		/////////////////////////////////////////////////////////////
 
 
@@ -287,7 +287,6 @@ int main()
 
 				clock_t t5 = clock();
 				while (end_ppc_generation == false) {
-					
 
 					clock_t t13 = clock();
 					if(modifiedBatch_mode == 0)

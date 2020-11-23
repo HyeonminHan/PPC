@@ -1348,7 +1348,7 @@ void make_PPC_modified_batch_DCT(
 		Mat colors_dct_u = Mat::zeros(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
 		Mat colors_dct_v = Mat::zeros(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
 
-		Mat occlusion_dct(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
+		Mat occlusion_dct = Mat::zeros(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
 
 		for (int cam = 0; cam < total_num_cameras; cam++) {
 
@@ -1405,10 +1405,10 @@ void make_PPC_modified_batch_DCT(
 				colors_dct_u.at<uchar>(i, j) = color[1];
 				colors_dct_v.at<uchar>(i, j) = color[2];
 
-				occlusion_dct.at<bool>(i, j) = false;
+				occlusion_dct.at<uchar>(i, j) = 255;
 			}
 			else {
-				occlusion_dct.at<bool>(i, j) = true;
+				occlusion_dct.at<uchar>(i, j) = 0;
 			}
 		}
 		if (pixel_count == 0) {
@@ -1422,7 +1422,7 @@ void make_PPC_modified_batch_DCT(
 			for (int i = 0; i < sqrt(total_num_cameras); i++) {
 				for (int j = 0; j < sqrt(total_num_cameras); j++) {
 
-					bool is_occ = occlusion_dct.at<bool>(i, j);
+					bool is_occ = occlusion_dct.at<uchar>(i, j);
 					if (is_occ) {
 						colors.at<Vec3b>(i, j)[0] = uchar(pixel_sum[0] / pixel_count);
 						colors.at<Vec3b>(i, j)[1] = uchar(pixel_sum[1] / pixel_count);
@@ -1434,8 +1434,16 @@ void make_PPC_modified_batch_DCT(
 				}
 			}
 		}
-		else {//laplacian
-			;
+
+		else if (backgroundfilling_mode == 1) {//laplacian
+			//Mat colors_dct_y_before = colors_dct_y.clone();
+			//Mat colors_dct_y_after = colors_dct_y.clone();
+			interpolate_background_w_laplacian(&colors_dct_y, &occlusion_dct, &colors_dct_y);
+
+			//imshow_zoomin(occlusion_dct, 50, "occlusion_dct");
+			//imshow_zoomin(colors_dct_y_before, 50, "before");
+			//imshow_zoomin(colors_dct_y, 50, "after");
+
 		}
 
 		Mat y_idct, u_idct, v_idct, colors_idct;
@@ -3294,4 +3302,385 @@ void write_yuv2(int x, int y, Mat colors, Mat occlusion, Mat colors_zoom, Mat& r
 	//f_y.close();
 	//f_u.close();
 	//f_v.close();
+}
+
+void regionFill(
+	Mat* io_image,
+	Mat* in_mask,
+	Mat* in_downsized_image)
+{
+	/*cout << "In regionFill output image 1" << endl;
+	for (int i = 0; i < io_image->rows; i++) {
+		for (int j = 0; j < io_image->cols; j++) {
+			io_image->at<uchar>(i, j) = 0;
+		}
+		cout << endl;
+	}*/
+	//return;
+
+	int stride = io_image->cols;
+	int numElem = 0;
+	int numSparseElem = 0;
+	std::vector<uint32_t> indexing;
+
+	int ww_mask, hh_mask;
+	int ww_io_image, hh_io_image;
+	int ww_dwn_image, hh_dwn_image;
+
+	bool** p_mask;
+	unsigned char** p_io_img, ** p_dwn_img;
+
+	ww_io_image = io_image->cols;
+	hh_io_image = io_image->rows;
+	ww_mask = in_mask->cols;
+	hh_mask = in_mask->rows;
+	ww_dwn_image = in_downsized_image->cols;
+	hh_dwn_image = in_downsized_image->rows;
+
+
+	indexing.resize(ww_mask * hh_mask);
+	for (int j = 0; j < hh_mask; j++)
+	{
+		for (int i = 0; i < ww_mask; i++)
+		{
+			if (in_mask->at<uchar>(j, i) == 0)
+			{
+				indexing[j * ww_mask + i] = numElem;
+				numElem++;
+			}
+		}
+	}
+
+	// create a sparse matrix with the coefficients
+	std::vector<uint32_t> iSparse;
+	std::vector<uint32_t> jSparse;
+	std::vector<double>   valSparse;
+
+	iSparse.resize(numElem * 5);
+	jSparse.resize(numElem * 5);
+	valSparse.resize(numElem * 5);
+
+	// create an initial solution using the low-resolution
+	std::vector<double> b;
+	b.resize(numElem);
+
+	// fill in the system
+	int idx = 0;
+	int idxSparse = 0;
+	for (int row = 0; row < hh_io_image; row++)
+	{
+		for (int column = 0; column < ww_io_image; column++)
+		{
+			if (in_mask->at<uchar>(row, column) == 0)
+			{
+				int count = 0;
+				b[idx] = 0;
+				for (int i = -1; i < 2; i++)
+				{
+					for (int j = -1; j < 2; j++)
+					{
+						if ((i == j) || (i == -j))
+						{
+							continue;
+						}
+						if ((column + j < 0) || (column + j > ww_io_image - 1))
+						{
+							continue;
+						}
+						if ((row + i < 0) || (row + i > hh_io_image - 1))
+						{
+							continue;
+						}
+						count++;
+
+						if (in_mask->at<uchar>(row + i, column + j) == 255)
+						{
+							b[idx] += io_image->at<uchar>(row + i, column + j);
+						}
+						else
+						{
+							iSparse[idxSparse] = idx;
+							jSparse[idxSparse] = indexing[column + j + stride * (row + i)];
+							valSparse[idxSparse] = -1;
+							idxSparse++;
+						}
+
+					}
+				}
+				// now insert the weight of the center pixel
+				iSparse[idxSparse] = idx;
+				jSparse[idxSparse] = idx;
+				valSparse[idxSparse] = count; // Matrix A
+				idx++;
+				idxSparse++;
+			}
+		}
+	}
+	numSparseElem = idxSparse;
+
+	// Gauss-Seidel relaxation
+	// now solve the linear system Ax=b using Gauss-Siedel relaxation, with initial guess coming from the lower
+	// resolution
+	std::vector<double> x;
+	x.resize(numElem);
+	if (in_downsized_image->cols == io_image->cols)
+	{
+		// low resolution image not provided, let's use for the initialization the mean value of the active pixels
+		double mean = 0.0;
+		idx = 0;
+		for (int row = 0; row < hh_io_image; row++)
+		{
+			for (int column = 0; column < ww_io_image; column++)
+			{
+				if (in_mask->at<uchar>(row, column) == 255)
+				{
+					mean += double(io_image->at<uchar>(row, column));
+					idx++;
+				}
+			}
+		}
+
+		mean /= idx;
+		idx = 0;
+		for (int row = 0; row < hh_io_image; row++)
+		{
+			for (int column = 0; column < ww_io_image; column++)
+			{
+				if (in_mask->at<uchar>(row, column) == 0)
+				{
+					x[idx] = mean;
+					idx++;
+				}
+			}
+		}
+	}
+	else
+	{
+		idx = 0;
+		for (int row = 0; row < hh_io_image; row++)
+		{
+			for (int column = 0; column < ww_io_image; column++)
+			{
+				if (in_mask->at<uchar>(row, column) == 0)
+				{
+					x[idx] = in_downsized_image->at<uchar>((int)(row / 2), (int)(column / 2));
+					idx++;
+				}
+			}
+		}
+	}
+
+	int    maxIteration = 1024;
+	double maxError = 0.00001;
+	int it = 0;
+	for (; it < maxIteration; it++)
+	{
+		int    idxSparse = 0;
+		double error = 0;
+		double val = 0;
+		for (int centerIdx = 0; centerIdx < numElem; centerIdx++)
+		{
+			// add the b result
+			val = b[centerIdx];
+			while ((idxSparse < numSparseElem) && (iSparse[idxSparse] == centerIdx))
+			{
+				if (valSparse[idxSparse] < 0)
+				{
+					val += x[jSparse[idxSparse]];
+					idxSparse++;
+				}
+				else
+				{
+					// final value
+					val /= valSparse[idxSparse];
+
+					// accumulate the error
+					error += (val - x[centerIdx]) * (val - x[centerIdx]);
+
+					// update the value
+					x[centerIdx] = val;
+					idxSparse++;
+				}
+			}
+
+		}
+		error = error / numElem;
+		if (error < maxError) { break; }
+	}
+
+
+	// put the value back in the image
+	idx = 0;
+	for (int row = 0; row < hh_io_image; row++)
+	{
+		for (int column = 0; column < ww_io_image; column++)
+		{
+			if (in_mask->at<uchar>(row, column) == 0)
+			{
+				io_image->at<uchar>(row, column) = (unsigned char)x[idx];
+				idx++;
+			}
+		}
+	}
+}
+
+void CreateCoarseLayer(
+	Mat* in_image,
+	Mat* out_mip,
+	Mat* in_occupancyMap,
+	Mat* out_mipOccupancyMap)
+{
+
+	int dyadicWidth = 1;
+	while (dyadicWidth < in_image->cols) dyadicWidth *= 2;
+	int dyadicHeight = 1;
+	while (dyadicHeight < in_image->rows) dyadicHeight *= 2;
+
+	// allocate the mipmap with half the resolution
+	*out_mip = Mat::zeros((dyadicHeight / 2), (dyadicWidth / 2), CV_8U);
+	*out_mipOccupancyMap = Mat::zeros((dyadicHeight / 2), (dyadicWidth / 2), CV_8U);
+
+	int    stride = in_image->cols;
+	int    newStride = (dyadicWidth / 2);
+	int    x, y, i, j;
+	double num, den;
+	for (y = 0; y < out_mip->rows; y++)
+	{
+		for (x = 0; x < out_mip->cols; x++)
+		{
+			num = 0;
+			den = 0;
+			for (i = 0; i < 2; i++)
+			{
+				for (j = 0; j < 2; j++)
+				{
+					int row =
+						(2 * y + i) < 0 ? 0 : (2 * y + i) >= in_image->rows ? in_image->rows - 1 : (2 * y + i);
+					int column =
+						(2 * x + j) < 0 ? 0 : (2 * x + j) >= in_image->cols ? in_image->cols - 1 : (2 * x + j);
+					if (in_occupancyMap->at<uchar>(row, column) == 255)
+					{
+						den++;
+						num += in_image->at<uchar>(row, column);
+					}
+				}
+			}
+			if (den > 0)
+			{
+				in_occupancyMap->at<uchar>(y, x) = 255;
+				out_mip->at<uchar>(y, x) = (unsigned char)std::round(num / den);
+			}
+		}
+	}
+}
+
+void interpolate_background_w_laplacian(
+	Mat* in_image,
+	Mat* in_mask,
+	Mat* out_image)
+{
+	vector<Mat*> mipVec;
+	vector<Mat*> mipOccupancyMapVec;
+	Mat occupancyMapTemp;
+	Mat tmp_mip;
+	Mat tmp_mipOccupancy;
+	int miplev = 0, i = 0;
+
+	in_mask->copyTo(occupancyMapTemp);
+	in_image->copyTo(*out_image);
+
+	/*cout << "output image 1" << endl;
+	for (int i = 0; i < out_image->rows; i++) {
+		for (int j = 0; j < out_image->cols; j++) {
+			cout << (int)out_image->at<uchar>(i, j) << "\t";
+		}
+		cout << endl;
+	}*/
+	// create coarse image by dyadic sampling
+	//mipVec.in_Initialize();
+	//mipOccupancyMapVec.in_Initialize();
+	while (1)
+	{
+		if (miplev > 0)
+		{
+			CreateCoarseLayer(
+				mipVec[miplev - 1],
+				&tmp_mip,
+				mipOccupancyMapVec[miplev - 1],
+				&tmp_mipOccupancy);
+		}
+		else
+		{
+			CreateCoarseLayer(
+				out_image,
+				&tmp_mip,
+				&occupancyMapTemp,
+				&tmp_mipOccupancy);
+		}
+		mipVec.push_back(&tmp_mip);
+		mipOccupancyMapVec.push_back(&tmp_mipOccupancy);
+
+		if (tmp_mip.cols <= 4 || tmp_mip.rows <= 4) break;
+		++miplev;
+	}
+	/*for (int i = 0; i < out_image->rows; i++) {
+		for (int j = 0; j < out_image->cols; j++) {
+			cout << (int)out_image->at<uchar>(i, j) << "\t";
+		}
+		cout << endl;
+	}*/
+	miplev++;
+	// push phase: inpaint laplacian
+	regionFill(
+		mipVec[miplev - 1],
+		mipOccupancyMapVec[miplev - 1],
+		mipVec[miplev - 1]);
+
+	for (i = miplev - 1; i >= 0; --i)
+	{
+		if (i > 0)
+		{
+			regionFill(
+				mipVec[i - 1],
+				mipOccupancyMapVec[i - 1],
+				mipVec[i]);
+		}
+		else
+		{
+			regionFill(
+				out_image,
+				&occupancyMapTemp,
+				mipVec[i]);
+		}
+	}
+	/*cout << "output image 2" << endl;
+
+	for (int i = 0; i < out_image->rows; i++) {
+		for (int j = 0; j < out_image->cols; j++) {
+			cout << (int)out_image->at<uchar>(i, j) << "\t";
+		}
+		cout << endl;
+	}*/
+}
+
+void imshow_zoomin(Mat result, int tile_size, string img_name) {
+
+	Mat result_zoomin = Mat::zeros(result.rows * tile_size, result.cols * tile_size, CV_8U);
+
+	for (int i = 0; i < result.rows; i++) {
+		for (int j = 0; j < result.cols; j++) {
+			for (int ii = 0; ii < tile_size; ii++) {
+				for (int jj = 0; jj < tile_size; jj++) {
+					int iii = i * tile_size + ii;
+					int jjj = j * tile_size + jj;
+					result_zoomin.at<uchar>(iii, jjj) = result.at<uchar>(i, j);
+
+				}
+			}
+		}
+	}
+
+	imshow(img_name, result_zoomin);
+	waitKey(0);
+
 }
