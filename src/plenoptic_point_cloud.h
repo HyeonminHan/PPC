@@ -163,10 +163,10 @@ void calc_YUV_stddev_global(int cur_ppc_size,
 
 void color_imaging(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat> depth_imgs, vector<float> min, vector<float> Cube_size, vector<float> voxel_size, int voxel_div_num, int tile_size, Mat& ref_img);
 void color_imaging2(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat> depth_imgs, vector<float> min, vector<float> Cube_size, vector<float> voxel_size, int voxel_div_num, int tile_size,
-	Mat& ref_img_spe, Mat& ref_img_lam, vector<float>& psnr_spe, vector<float>& psnr_lam, int& cnt_spe, int& cnt_lam);
+	Mat& ref_img_spe, Mat& ref_img_lam, vector<float>& psnr_spe, vector<float>& psnr_lam, int& cnt_spe, int& cnt_lam, string data_name);
 
 void write_yuv(int x, int y, Mat colors, Mat occlusion, Mat& ref_img);
-void write_yuv2(int x, int y, Mat colors, Mat occlusion, Mat colors_zoom, Mat& ref_img, string name);
+void write_yuv2(int x, int y, Mat colors, Mat occlusion, Mat colors_zoom, Mat& ref_img, string name, string data_name);
 
 void make_PPC_modified_batch_DCT(
 	int iteration,

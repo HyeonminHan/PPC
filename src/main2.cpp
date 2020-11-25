@@ -70,7 +70,7 @@ int main()
 	
 	
 	///////////////////here////////////////////
-	vector<int> datas = { 5,6,7,8,9,10,11,12,13 };
+	vector<int> datas = { 5,8,9,11,13, 5, 10, 12 };
 	////////////////////////////////////////////
 
 
@@ -117,7 +117,7 @@ int main()
 
 #ifdef TEST
 		/////////////////////////here//////////////////////////
-		vector<int> voxel_div_nums = { 1024,8192, 4096 };
+		vector<int> voxel_div_nums = {1024,8192};
 		for (int voxel_i = 0; voxel_i < voxel_div_nums.size(); voxel_i++) {
 
 			bool modifiedBatch_mode = 1; //0 - pure modified batch, 1 - DCT modified batch
@@ -264,6 +264,67 @@ int main()
 				pointclouds.clear();
 				vector<PointCloud<PointXYZRGB>::Ptr>().swap(pointclouds);
 
+				//int cnt_spe = 0;
+				//int cnt_lam = 0;
+				//int x, y;
+
+				//Mat ref_img_spe = color_imgs[0].clone();
+				//Mat ref_img_lam = color_imgs[0].clone();
+				//cvtColor(ref_img_spe, ref_img_spe, CV_YUV2BGR);
+				//cvtColor(ref_img_lam, ref_img_lam, CV_YUV2BGR);
+
+				//vector<float> avr_psnrs_spe = { 0., 0., 0. };
+				//vector<float> avr_psnrs_lam = { 0., 0., 0. };
+
+				//string folder_name_string0 = "output\\lambertian\\" + name_mode + "\\";
+				//string folder_name_string00 = "output\\specular\\" + name_mode + "\\";
+				//const char* foler_name0 = folder_name_string0.c_str();
+				//const char* foler_name00 = folder_name_string00.c_str();
+
+				//CreateDirectory(foler_name0, NULL);
+				//CreateDirectory(foler_name00, NULL);
+
+				//string folder_name_string1 = "output\\lambertian\\" + name_mode + "\\__mask\\";
+				//string folder_name_string2 = "output\\lambertian\\" + name_mode + "\\__y_lap\\";
+				//string folder_name_string3 = "output\\lambertian\\" + name_mode + "\\color_images\\";
+				//string folder_name_string4 = "output\\lambertian\\" + name_mode + "\\__y\\";
+				//string folder_name_string11 = "output\\specular\\" + name_mode + "\\__mask\\";
+				//string folder_name_string22 = "output\\specular\\" + name_mode + "\\__y_lap\\";
+				//string folder_name_string33 = "output\\specular\\" + name_mode + "\\color_images\\";
+				//string folder_name_string44 = "output\\specular\\" + name_mode + "\\__y\\";
+
+				//const char* foler_name1 = folder_name_string1.c_str();
+				//const char* foler_name2 = folder_name_string2.c_str();
+				//const char* foler_name3 = folder_name_string3.c_str();
+				//const char* foler_name4 = folder_name_string4.c_str();
+				//const char* foler_name11 = folder_name_string11.c_str();
+				//const char* foler_name22 = folder_name_string22.c_str();
+				//const char* foler_name33 = folder_name_string33.c_str();
+				//const char* foler_name44 = folder_name_string44.c_str();
+
+				//CreateDirectory(foler_name1, NULL);
+				//CreateDirectory(foler_name2, NULL);
+				//CreateDirectory(foler_name3, NULL);
+				//CreateDirectory(foler_name4, NULL);
+				//CreateDirectory(foler_name11, NULL);
+				//CreateDirectory(foler_name22, NULL);
+				//CreateDirectory(foler_name33, NULL);
+				//CreateDirectory(foler_name44, NULL);
+
+				//for (int i = 0; i < 250; i++) {
+				//	for (int j = 0; j < 500; j++) {
+				//		x = i * 12;
+				//		y = j * 4;
+
+				//		color_imaging2(x, y, color_imgs, depth_imgs, min, Cube_size, cube_size, voxel_div_num, 30, ref_img_spe, ref_img_lam, avr_psnrs_spe, avr_psnrs_lam, cnt_spe, cnt_lam, name_mode);
+				//		if (cnt_lam == 50000) break;
+				//	}
+				//	if (cnt_lam == 50000) break;
+				//}
+				//imwrite("output\\specular\\" + name_mode+"\\"+"ref_img_spe.jpg", ref_img_spe);
+				//imwrite("output\\lambertian\\" + name_mode + "\\" + "ref_img_lam.jpg", ref_img_lam);
+
+				//break;
 				int iteration = 0;
 				bool end_ppc_generation = false;
 				int cur_ppc_size = 0;
@@ -276,13 +337,8 @@ int main()
 				float making_ppc_all_time = (t4 - t1) / CLOCKS_PER_SEC;
 				float projection_time_per_view = 0.;
 #endif
-				int x, y;
 				char destroy_window;
-				vector<float> avr_psnrs_spe = { 0., 0., 0. };
-				vector<float> avr_psnrs_lam = { 0., 0., 0. };
 
-				int cnt_spe = 0;
-				int cnt_lam = 0;
 
 
 				clock_t t5 = clock();

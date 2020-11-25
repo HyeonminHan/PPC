@@ -1212,7 +1212,6 @@ void make_PPC_modified_batch(
 					ppc_vec[ppc_idx].SetColor(color_imgs[cam].at<Vec3b>(v, u), cam);
 				}
 			}
-
 		}
 
 		if (!is_first_color) {
@@ -1338,7 +1337,6 @@ void make_PPC_modified_batch_DCT(
 		bool is_first_color = true;
 		cnt++;
 
-
 		int num = 0;
 		vector<ushort> pixel_sum(3, 0);
 		int pixel_count = 0;
@@ -1347,7 +1345,6 @@ void make_PPC_modified_batch_DCT(
 		Mat colors_dct_y = Mat::zeros(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
 		Mat colors_dct_u = Mat::zeros(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
 		Mat colors_dct_v = Mat::zeros(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
-
 		Mat occlusion_dct = Mat::zeros(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
 
 		for (int cam = 0; cam < total_num_cameras; cam++) {
@@ -1423,7 +1420,7 @@ void make_PPC_modified_batch_DCT(
 				for (int j = 0; j < sqrt(total_num_cameras); j++) {
 
 					bool is_occ = occlusion_dct.at<uchar>(i, j);
-					if (is_occ) {
+					if (occlusion_dct.at<uchar>(i, j) == 0) {
 						colors.at<Vec3b>(i, j)[0] = uchar(pixel_sum[0] / pixel_count);
 						colors.at<Vec3b>(i, j)[1] = uchar(pixel_sum[1] / pixel_count);
 						colors.at<Vec3b>(i, j)[2] = uchar(pixel_sum[2] / pixel_count);
@@ -1436,14 +1433,16 @@ void make_PPC_modified_batch_DCT(
 		}
 
 		else if (backgroundfilling_mode == 1) {//laplacian
-			//Mat colors_dct_y_before = colors_dct_y.clone();
-			//Mat colors_dct_y_after = colors_dct_y.clone();
+			Mat colors_dct_y_before = colors_dct_y.clone();
+			Mat colors_dct_y_after = colors_dct_y.clone();
+
 			interpolate_background_w_laplacian(&colors_dct_y, &occlusion_dct, &colors_dct_y);
+			interpolate_background_w_laplacian(&colors_dct_u, &occlusion_dct, &colors_dct_u);
+			interpolate_background_w_laplacian(&colors_dct_v, &occlusion_dct, &colors_dct_v);
 
 			//imshow_zoomin(occlusion_dct, 50, "occlusion_dct");
 			//imshow_zoomin(colors_dct_y_before, 50, "before");
 			//imshow_zoomin(colors_dct_y, 50, "after");
-
 		}
 
 		Mat y_idct, u_idct, v_idct, colors_idct;
@@ -1452,16 +1451,15 @@ void make_PPC_modified_batch_DCT(
 		color_idct[0] = perform_dct_idct_img(colors_dct_y, dct_y_valid_pixnum);
 		color_idct[1] = perform_dct_idct_img(colors_dct_u, dct_uv_valid_pixnum);
 		color_idct[2] = perform_dct_idct_img(colors_dct_v, dct_uv_valid_pixnum);
-		//colors zeros
-
 		merge(color_idct, 3, colors_idct);
 
 		for (int cam = 0; cam < total_num_cameras; cam++) {
 
 			int i = cam / int(sqrt(total_num_cameras));
 			int j = cam % int(sqrt(total_num_cameras));
+			if (occlusion_dct.at<uchar>(i, j)==255) {
 
-			if (is_first_color) {
+				if (is_first_color) {
 					float geo[3] = { X, Y, Z };
 					if (iteration == 0) {
 						ppc_vec[ppc_idx] = PPC_v1();
@@ -1472,9 +1470,10 @@ void make_PPC_modified_batch_DCT(
 					ppc_vec[ppc_idx].SetGeometry(geo);
 					ppc_vec[ppc_idx].SetColor(colors_idct.at<Vec3b>(i, j), order_vec[cam]);
 					is_first_color = false;
-			}
-			else {
-				ppc_vec[ppc_idx].SetColor(colors_idct.at<Vec3b>(i, j), order_vec[cam]);
+				}
+				else {
+					ppc_vec[ppc_idx].SetColor(colors_idct.at<Vec3b>(i, j), order_vec[cam]);
+				}
 			}
 		}
 
@@ -1491,6 +1490,8 @@ void make_PPC_modified_batch_DCT(
 	cout << "ppc size : " << ppc_idx << endl;
 	cout << "make_PPC_modified_batch is done..." << endl;
 }
+
+
 
 vector<PointCloud<PointXYZRGB>::Ptr> make_all_PC(
 	vector<Mat> color_imgs,
@@ -2836,7 +2837,7 @@ void write_yuv(int x, int y, Mat colors, Mat occlusion, Mat& ref_img) {
 }
 
 void color_imaging2(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat> depth_imgs, vector<float> min, vector<float> Cube_size, vector<float> voxel_size, int voxel_div_num, int tile_size, 
-	Mat& ref_img_spe, Mat& ref_img_lam, vector<float> &avr_psnrs_spe, vector<float> &avr_psnrs_lam, int &cnt_spe, int &cnt_lam) {
+	Mat& ref_img_spe, Mat& ref_img_lam, vector<float> &avr_psnrs_spe, vector<float> &avr_psnrs_lam, int &cnt_spe, int &cnt_lam, string data_name) {
 
 	Vec3b d, color;
 	Vec3s d_s, color_s;
@@ -3009,11 +3010,15 @@ void color_imaging2(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat
 
 	cvtColor(colors_zoom, colors_zoom, CV_YUV2BGR);
 	variance /= pixel_count;
-	//if(variance > 200)
-	//	write_yuv2(query_x, query_y, colors, occlusion_dct, colors_zoom, ref_img_spe, "specular");
-	//else
-	//	write_yuv2(query_x, query_y, colors, occlusion_dct, colors_zoom, ref_img_lam, "lambertian");
-	////return;
+	if (variance > 200) {
+		cnt_spe++;
+		write_yuv2(query_x, query_y, colors, occlusion_dct, colors_zoom, ref_img_spe, "specular", data_name);
+	}
+	else if(cnt_lam < 50000){
+		cnt_lam++;
+		write_yuv2(query_x, query_y, colors, occlusion_dct, colors_zoom, ref_img_lam, "lambertian", data_name);
+	}
+	return;
 
 	Mat colors_dct_y = Mat::zeros(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
 	Mat colors_dct_u = Mat::zeros(sqrt(total_num_cameras), sqrt(total_num_cameras), CV_8UC1);
@@ -3125,77 +3130,77 @@ void color_imaging2(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat
 	}
 
 
-	cout << "color y" << endl;
-	for (int i = 0; i < colors_dct_y.rows; i++) {
-		for (int j = 0; j < colors_dct_y.cols; j++)
-			cout << colors_dct_y.at<float>(i, j) << " ";
-		cout << endl;
-	}
-	cout << endl;
+	//cout << "color y" << endl;
+	//for (int i = 0; i < colors_dct_y.rows; i++) {
+	//	for (int j = 0; j < colors_dct_y.cols; j++)
+	//		cout << colors_dct_y.at<float>(i, j) << " ";
+	//	cout << endl;
+	//}
+	//cout << endl;
 
-	cout << "dct y" << endl;
-	for (int i = 0; i < y_dct.rows; i++) {
-		for (int j = 0; j < y_dct.cols; j++)
-			cout << y_dct.at<float>(i, j) << " ";
-		cout << endl;
-	}
-	cout << endl;
+	//cout << "dct y" << endl;
+	//for (int i = 0; i < y_dct.rows; i++) {
+	//	for (int j = 0; j < y_dct.cols; j++)
+	//		cout << y_dct.at<float>(i, j) << " ";
+	//	cout << endl;
+	//}
+	//cout << endl;
 
-	cout << "idct y" << endl;
-	for (int i = 0; i < y_idct.rows; i++) {
-		for (int j = 0; j < y_idct.cols; j++)
-			cout << (int)y_idct.at<uchar>(i, j) << " ";
-		cout << endl;
-	}
-	cout << endl;
+	//cout << "idct y" << endl;
+	//for (int i = 0; i < y_idct.rows; i++) {
+	//	for (int j = 0; j < y_idct.cols; j++)
+	//		cout << (int)y_idct.at<uchar>(i, j) << " ";
+	//	cout << endl;
+	//}
+	//cout << endl;
 
-	cout << "color u" << endl;
-	for (int i = 0; i < colors_dct_u.rows; i++) {
-		for (int j = 0; j < colors_dct_u.cols; j++)
-			cout << colors_dct_u.at<float>(i, j) << " ";
-		cout << endl;
-	}
-	cout << endl;
+	//cout << "color u" << endl;
+	//for (int i = 0; i < colors_dct_u.rows; i++) {
+	//	for (int j = 0; j < colors_dct_u.cols; j++)
+	//		cout << colors_dct_u.at<float>(i, j) << " ";
+	//	cout << endl;
+	//}
+	//cout << endl;
 
-	cout << "dct u" << endl;
-	for (int i = 0; i < u_dct.rows; i++) {
-		for (int j = 0; j < u_dct.cols; j++)
-			cout << u_dct.at<float>(i, j) << " ";
-		cout << endl;
-	}
-	cout << endl;
+	//cout << "dct u" << endl;
+	//for (int i = 0; i < u_dct.rows; i++) {
+	//	for (int j = 0; j < u_dct.cols; j++)
+	//		cout << u_dct.at<float>(i, j) << " ";
+	//	cout << endl;
+	//}
+	//cout << endl;
 
-	cout << "idct u" << endl;
-	for (int i = 0; i < u_idct.rows; i++) {
-		for (int j = 0; j < u_idct.cols; j++)
-			cout << (int)u_idct.at<uchar>(i, j) << " ";
-		cout << endl;
-	}
-	cout << endl;
+	//cout << "idct u" << endl;
+	//for (int i = 0; i < u_idct.rows; i++) {
+	//	for (int j = 0; j < u_idct.cols; j++)
+	//		cout << (int)u_idct.at<uchar>(i, j) << " ";
+	//	cout << endl;
+	//}
+	//cout << endl;
 
-	cout << "color v" << endl;
-	for (int i = 0; i < colors_dct_v.rows; i++) {
-		for (int j = 0; j < colors_dct_v.cols; j++)
-			cout << colors_dct_v.at<float>(i, j) << " ";
-		cout << endl;
-	}
-	cout << endl;
+	//cout << "color v" << endl;
+	//for (int i = 0; i < colors_dct_v.rows; i++) {
+	//	for (int j = 0; j < colors_dct_v.cols; j++)
+	//		cout << colors_dct_v.at<float>(i, j) << " ";
+	//	cout << endl;
+	//}
+	//cout << endl;
 
-	cout << "dct v" << endl;
-	for (int i = 0; i < v_dct.rows; i++) {
-		for (int j = 0; j < v_dct.cols; j++)
-			cout << v_dct.at<float>(i, j) << " ";
-		cout << endl;
-	}
-	cout << endl;
+	//cout << "dct v" << endl;
+	//for (int i = 0; i < v_dct.rows; i++) {
+	//	for (int j = 0; j < v_dct.cols; j++)
+	//		cout << v_dct.at<float>(i, j) << " ";
+	//	cout << endl;
+	//}
+	//cout << endl;
 
-	cout << "idct v" << endl;
-	for (int i = 0; i < v_idct.rows; i++) {
-		for (int j = 0; j < v_idct.cols; j++)
-			cout << (int)v_idct.at<uchar>(i, j) << " ";
-		cout << endl;
-	}
-	cout << endl;
+	//cout << "idct v" << endl;
+	//for (int i = 0; i < v_idct.rows; i++) {
+	//	for (int j = 0; j < v_idct.cols; j++)
+	//		cout << (int)v_idct.at<uchar>(i, j) << " ";
+	//	cout << endl;
+	//}
+	//cout << endl;
 	return;
 
 	Mat colors_idct_zoom(sqrt(total_num_cameras) * tile_size, sqrt(total_num_cameras) * tile_size, CV_8UC3);
@@ -3249,7 +3254,7 @@ void color_imaging2(int query_x, int query_y, vector<Mat> color_imgs, vector<Mat
 
 }
 
-void write_yuv2(int x, int y, Mat colors, Mat occlusion, Mat colors_zoom, Mat& ref_img, string name) {
+void write_yuv2(int x, int y, Mat colors, Mat occlusion, Mat colors_zoom, Mat& ref_img, string name, string data_name) {
 
 	Mat yuv[3];
 	Mat y_(Size(colors.cols, colors.rows), CV_8U);
@@ -3263,45 +3268,16 @@ void write_yuv2(int x, int y, Mat colors, Mat occlusion, Mat colors_zoom, Mat& r
 			else occ.at<uchar>(i, j) = 255;
 		}
 	}
+	Mat result;
 
-	//string folder_name_string = "output\\" + name + "\\occlusion_images";
-	//const char* foler_name = folder_name_string.c_str();
-	//CreateDirectory("output\\image", NULL);
-	//CreateDirectory(foler_name, NULL);
+	interpolate_background_w_laplacian(&yuv[0], &occ, &result);
 
-	imwrite("output\\"+ name +"\\__mask_apart\\apart_occ_" + to_string(x) + "_" + to_string(y) + ".png", occ);
-	imwrite("output\\" + name + "\\__images_apart\\apart_y_" + to_string(x) + "_" + to_string(y) + ".png", yuv[0]);
-	imwrite("output\\" + name + "\\color_images_apart\\apart_color_" + to_string(x) + "_" + to_string(y) + ".png", colors_zoom);
+	imwrite("output\\"+ name + "\\" + data_name + "\\__mask\\" + data_name + "_occ_" + to_string(x) + "_" + to_string(y) + ".png", occ);
+	imwrite("output\\" + name + "\\" + data_name + "\\__y\\" + data_name + "_y_" + to_string(x) + "_" + to_string(y) + ".png", yuv[0]);
+	imwrite("output\\" + name + "\\" + data_name + "\\__y_lap\\" + data_name + "_y_lap_" + to_string(x) + "_" + to_string(y) + ".png", result);
+	imwrite("output\\" + name + "\\" + data_name + "\\color_images\\" + data_name + "_color_" + to_string(x) + "_" + to_string(y) + ".png", colors_zoom);
 
 	circle(ref_img, Point(x, y), 2, Scalar(0, 0, 255));
-
-	//ofstream f_y, f_u, f_v;
-	//f_y.open("output\\y_data.csv", ios::app);
-	//f_u.open("output\\u_data.csv", ios::app);
-	//f_v.open("output\\v_data.csv", ios::app);
-
-	//f_y << "x,y,\n" << x << "," << y << endl << endl;
-	//f_u << "x,y,\n" << x << "," << y << endl << endl;
-	//f_v << "x,y,\n" << x << "," << y << endl << endl;
-
-	//for (int i = 0; i < colors.rows; i++) {
-	//	for (int j = 0; j < colors.cols; j++) {
-	//		f_y << (int)colors.at<Vec3b>(i, j)[0] << ",";
-	//		f_u << (int)colors.at<Vec3b>(i, j)[1] << ",";
-	//		f_v << (int)colors.at<Vec3b>(i, j)[2] << ",";
-	//	}
-	//	f_y << endl;
-	//	f_u << endl;
-	//	f_v << endl;
-	//}
-
-	//f_y << endl;
-	//f_u << endl;
-	//f_v << endl;
-
-	//f_y.close();
-	//f_u.close();
-	//f_v.close();
 }
 
 void regionFill(
@@ -3567,7 +3543,7 @@ void CreateCoarseLayer(
 			}
 			if (den > 0)
 			{
-				in_occupancyMap->at<uchar>(y, x) = 255;
+				out_mipOccupancyMap->at<uchar>(y, x) = 255;
 				out_mip->at<uchar>(y, x) = (unsigned char)std::round(num / den);
 			}
 		}
